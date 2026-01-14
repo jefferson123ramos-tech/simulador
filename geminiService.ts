@@ -10,7 +10,7 @@ const cleanJsonResponse = (text: string): string => {
 };
 
 export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
-  // Acesso seguro à chave definida pelo Vite ou pelo ambiente
+  // O SDK utiliza process.env.API_KEY, que agora é alimentado pelo vite.config.ts
   const apiKey = process.env.API_KEY;
 
   if (!apiKey || apiKey === "" || apiKey === "undefined") {
