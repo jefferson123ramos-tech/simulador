@@ -1,4 +1,6 @@
 
+export type Difficulty = 'fácil' | 'médio' | 'difícil';
+
 export interface User {
   id: string;
   email: string;
@@ -17,4 +19,13 @@ export interface QuizData {
   questions: Question[];
 }
 
-export type AppState = 'login' | 'generator' | 'quiz' | 'result';
+export interface HistoryItem {
+  id: string;
+  subject: string;
+  date: string;
+  correct: number;
+  total: number;
+  difficulty: Difficulty;
+}
+
+export type AppState = 'login' | 'generator' | 'quiz' | 'result' | 'history';

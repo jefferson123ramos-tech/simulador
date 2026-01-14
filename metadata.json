@@ -1,5 +1,5 @@
 {
-  "name": "SimuladoAI",
-  "description": "Uma plataforma inteligente para geração de simulados personalizados a partir de resumos e tópicos de estudo, utilizando a IA do Google Gemini.",
+  "name": "Simulafacil",
+  "description": "Uma plataforma inteligente para geração de simulados personalizados, permitindo desde tópicos simples até textos detalhados para estudo com IA.",
   "requestFramePermissions": []
 }
