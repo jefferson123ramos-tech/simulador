@@ -32,9 +32,9 @@ const Logo: React.FC<{ size?: 'sm' | 'lg', className?: string, onClick?: () => v
 
 const getGradeStatus = (score: number, total: number) => {
   const percent = (score / total) * 100;
-  if (percent >= 70) return { label: 'APROVADO', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: '🏆', msg: 'Excelente! Domínio profissional do conteúdo.' };
-  if (percent >= 50) return { label: 'RECUPERAÇÃO', color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: '⚡', msg: 'Bom caminho, mas revise os pontos de atenção.' };
-  return { label: 'REPROVADO', color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20', icon: '📚', msg: 'Atenção: Necessário aprofundar nos estudos.' };
+  if (percent >= 70) return { label: 'APROVADO', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: '🏆', msg: 'Desempenho de excelência! Domínio profissional do conteúdo.' };
+  if (percent >= 50) return { label: 'RECUPERAÇÃO', color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: '⚡', msg: 'Bom progresso, mas revise as questões incorretas.' };
+  return { label: 'REPROVADO', color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20', icon: '📚', msg: 'Atenção necessária: O conteúdo exige mais dedicação.' };
 };
 
 export default function App() {
@@ -115,18 +115,29 @@ export default function App() {
   const downloadReport = () => {
     if (!quiz) return;
     const score = userAnswers.reduce((acc, ans, idx) => acc + (ans === quiz.questions[idx].correctAnswerIndex ? 1 : 0), 0);
-    let content = `RELATÓRIO SIMULAFACIL\nTema: ${currentSubject}\nPontuação: ${score}/${quiz.questions.length}\n\n`;
+    let content = `--- RELATÓRIO SIMULAFACIL ---\n\n`;
+    content += `Tema: ${currentSubject}\n`;
+    content += `Nível: ${currentDifficulty.toUpperCase()}\n`;
+    content += `Resultado: ${score}/${quiz.questions.length} (${Math.round((score/quiz.questions.length)*100)}%)\n`;
+    content += `Data: ${new Date().toLocaleString()}\n\n`;
+    content += `DETALHAMENTO DE ERROS:\n`;
+    
     quiz.questions.forEach((q, i) => {
       if (userAnswers[i] !== q.correctAnswerIndex) {
-        content += `[Q${i+1}] ${q.question}\n- Sua: ${q.options[userAnswers[i]] || 'N/A'}\n- Correta: ${q.options[q.correctAnswerIndex]}\n- Dica: ${q.mentorTip}\n\n`;
+        content += `\n[Questão ${i+1}] ${q.question}\n`;
+        content += `- Sua Resposta: ${q.options[userAnswers[i]] || 'Pulada'}\n`;
+        content += `- Gabarito Correto: ${q.options[q.correctAnswerIndex]}\n`;
+        content += `- Mentor: ${q.mentorTip}\n`;
       }
     });
+
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `simulado-${Date.now()}.txt`;
+    a.download = `relatorio-simulafacil-${Date.now()}.txt`;
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -172,7 +183,7 @@ const LoadingView: React.FC<{ message: string }> = ({ message }) => (
   <div className="text-center py-20 space-y-8 animate-in fade-in">
     <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
     <h3 className="text-2xl font-black text-white animate-pulse">{message}</h3>
-    <p className="text-slate-500">Mantenha esta guia aberta até a conclusão.</p>
+    <p className="text-slate-500">Isso pode levar alguns minutos devido ao volume de 50 questões.</p>
   </div>
 );
 
@@ -184,18 +195,18 @@ const GeneratorCard: React.FC<{ onGenerate: (t: string, d: Difficulty) => void; 
       <div className="flex justify-between items-start mb-8">
         <div>
           <h2 className="text-4xl font-black text-white italic tracking-tighter">Novo Simulado</h2>
-          <p className="text-slate-500 text-sm">Gerando 50 questões profissionais.</p>
+          <p className="text-slate-500 text-sm">Geração acadêmica de 50 questões.</p>
         </div>
-        {hasHistory && <button onClick={onViewHistory} className="text-xs font-bold text-indigo-400 hover:text-white uppercase tracking-widest bg-indigo-500/10 px-6 py-3 rounded-xl border border-indigo-500/20 transition-all">Ver Ranking</button>}
+        {hasHistory && <button onClick={onViewHistory} className="text-xs font-bold text-indigo-400 hover:text-white uppercase tracking-widest bg-indigo-500/10 px-6 py-3 rounded-xl border border-indigo-500/20 transition-all">Ranking Local</button>}
       </div>
       <div className="grid grid-cols-3 gap-3 mb-6">
         {(['fácil', 'médio', 'difícil'] as Difficulty[]).map(d => (
-          <button key={d} onClick={() => setDifficulty(d)} className={`py-4 rounded-2xl border font-black capitalize transition-all ${difficulty === d ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-slate-950/40 border-slate-700 text-slate-500 hover:border-slate-500'}`}>{d}</button>
+          <button key={d} onClick={() => setDifficulty(d)} className={`py-4 rounded-2xl border font-black capitalize transition-all ${difficulty === d ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20' : 'bg-slate-950/40 border-slate-700 text-slate-500 hover:border-slate-500'}`}>{d}</button>
         ))}
       </div>
       <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Digite o tema para as 50 questões..." className="w-full h-48 bg-slate-950/50 border border-slate-700 p-6 rounded-[2rem] outline-none focus:border-indigo-500 transition text-slate-300 resize-none mb-6 shadow-inner" />
       {error && <p className="mb-6 text-rose-400 text-xs font-bold bg-rose-400/10 p-4 rounded-xl border border-rose-400/20">{error}</p>}
-      <button onClick={() => onGenerate(text, difficulty)} className="w-full py-6 bg-white text-slate-950 font-black rounded-[2rem] hover:bg-indigo-50 transition-all uppercase tracking-widest shadow-2xl">Gerar Simulado Completo (50 Questões)</button>
+      <button onClick={() => onGenerate(text, difficulty)} className="w-full py-6 bg-white text-slate-950 font-black rounded-[2rem] hover:bg-indigo-50 transition-all uppercase tracking-widest shadow-2xl">Gerar Simulado Completo</button>
     </div>
   );
 };
@@ -260,8 +271,12 @@ const ResultView: React.FC<{ quiz: QuizData; userAnswers: number[]; onRestart: (
               <p className="text-xs font-black text-slate-500 uppercase tracking-widest">de {quiz.questions.length}</p>
             </div>
           </div>
+          <div className="text-xs font-black uppercase tracking-widest text-slate-500 mt-2">
+            Aproveitamento: {Math.round((score/quiz.questions.length)*100)}%
+          </div>
         </div>
       </div>
+      
       <div className="space-y-6">
         <h4 className="text-2xl font-black text-white italic ml-4 border-l-4 border-indigo-600 pl-4 uppercase tracking-tighter">Resumo de Erros</h4>
         <div className="grid grid-cols-1 gap-4">

@@ -12,19 +12,24 @@ const cleanJsonResponse = (text: string): string => {
 };
 
 export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
-  // Inicialização obrigatória usando a variável de ambiente process.env.API_KEY
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Obtém a chave de forma segura, priorizando o ambiente injetado
+  const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || '';
+  
+  if (!apiKey) {
+    throw new Error("A chave de API não foi detectada pelo sistema. Verifique as configurações de ambiente.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Gere um simulado acadêmico PROFISSIONAL e EXTENSO com EXATAMENTE 50 questões de múltipla escolha (4 alternativas cada) sobre o tema: "${text}".
+      contents: `Gere um simulado acadêmico de ALTA QUALIDADE com EXATAMENTE 50 questões de múltipla escolha (4 opções) sobre: "${text}".
 
-      REGRAS TÉCNICAS:
-      1. Nível: ${difficulty.toUpperCase()}.
-      2. Quantidade: 50 questões únicas.
-      3. mentorTip: Explicação técnica curtíssima (máximo 10 palavras).
-      4. JSON: Retorne APENAS o JSON, sem markdown ou textos explicativos.`,
+      ESTRUTURA:
+      - Nível: ${difficulty.toUpperCase()}.
+      - Campo mentorTip: Explicação técnica curta (máximo 12 palavras).
+      - Retorne APENAS o JSON purificado.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -57,6 +62,6 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
     return JSON.parse(jsonStr) as QuizData;
   } catch (e: any) {
     console.error("Erro na geração:", e);
-    throw new Error("Falha ao gerar o simulado de 50 questões. Verifique sua conexão ou tente um tema mais específico.");
+    throw new Error("Erro ao processar as 50 questões. Tente um tema mais específico.");
   }
 };
