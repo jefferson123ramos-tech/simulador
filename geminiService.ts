@@ -12,24 +12,26 @@ const cleanJsonResponse = (text: string): string => {
 };
 
 export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
-  // Obtém a chave de forma segura, priorizando o ambiente injetado
-  const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || '';
-  
+  // 1. Pega a chave na hora da execução para garantir que o ambiente esteja carregado
+  const apiKey = process.env.API_KEY;
+
+  // 2. Trava de segurança: Se não tiver chave, lança erro
   if (!apiKey) {
-    throw new Error("A chave de API não foi detectada pelo sistema. Verifique as configurações de ambiente.");
+    throw new Error("ERRO CRÍTICO: Chave API não encontrada (process.env.API_KEY).");
   }
 
+  // 3. Inicializa a IA somente agora, dentro do escopo da função
   const ai = new GoogleGenAI({ apiKey });
   
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Gere um simulado acadêmico de ALTA QUALIDADE com EXATAMENTE 50 questões de múltipla escolha (4 opções) sobre: "${text}".
+      contents: `Gere um simulado acadêmico de ALTA QUALIDADE com EXATAMENTE 50 questões de múltipla escolha (4 opções cada) sobre o tema: "${text}".
 
-      ESTRUTURA:
-      - Nível: ${difficulty.toUpperCase()}.
-      - Campo mentorTip: Explicação técnica curta (máximo 12 palavras).
-      - Retorne APENAS o JSON purificado.`,
+      ESTRUTURA OBRIGATÓRIA:
+      - Nível de Dificuldade: ${difficulty.toUpperCase()}.
+      - Campo mentorTip: Uma dica técnica ou explicação curta (máximo 12 palavras) para quem errar.
+      - Retorne estritamente um JSON puro, sem explicações fora do bloco.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -59,9 +61,15 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
     });
 
     const jsonStr = cleanJsonResponse(response.text || "");
-    return JSON.parse(jsonStr) as QuizData;
+    const parsed = JSON.parse(jsonStr) as QuizData;
+    
+    if (!parsed.questions || parsed.questions.length === 0) {
+      throw new Error("A IA não retornou questões válidas.");
+    }
+
+    return parsed;
   } catch (e: any) {
     console.error("Erro na geração:", e);
-    throw new Error("Erro ao processar as 50 questões. Tente um tema mais específico.");
+    throw new Error("Falha ao gerar as 50 questões. Detalhes: " + (e.message || "Erro desconhecido"));
   }
 };

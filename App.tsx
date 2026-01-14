@@ -9,7 +9,7 @@ import { generateQuiz } from './geminiService';
 const Logo: React.FC<{ size?: 'sm' | 'lg', className?: string, onClick?: () => void }> = ({ size = 'sm', className = '', onClick }) => {
   const isLarge = size === 'lg';
   return (
-    <div className={`flex items-center gap-3 ${className}`} onClick={onClick}>
+    <div className={`flex items-center gap-3 ${className} select-none`} onClick={onClick}>
       <div className={`relative flex-shrink-0 ${isLarge ? 'w-16 h-16' : 'w-9 h-9'} group`}>
         <div className="absolute inset-0 bg-indigo-500/30 blur-xl rounded-full group-hover:bg-indigo-400/50 transition-all duration-500"></div>
         <div className={`relative h-full w-full bg-gradient-to-br from-indigo-500 to-violet-700 rounded-xl flex items-center justify-center shadow-lg border border-white/20 overflow-hidden`}>
@@ -57,17 +57,42 @@ export default function App() {
 
   const handleLogin = async (emailInput: string) => {
     const cleanEmail = emailInput.trim();
-    if (!cleanEmail) return;
+    if (!cleanEmail) {
+      setError("Por favor, informe seu e-mail.");
+      return;
+    }
+    
     setLoading(true);
     setError(null);
+    
     try {
-      const { data, error: sbError } = await supabase.from('users_control').select('*').ilike('email', cleanEmail).maybeSingle();
+      // Usando ilike para garantir busca insensível a maiúsculas/minúsculas
+      const { data, error: sbError } = await supabase
+        .from('users_control')
+        .select('*')
+        .ilike('email', cleanEmail)
+        .maybeSingle();
+
       if (sbError) throw sbError;
-      if (!data) { setError("Usuário não cadastrado."); return; }
-      if (data.status === 'pendente') { setError("Sua conta ainda não foi aprovada."); return; }
+
+      if (!data) {
+        setError("Usuário não encontrado. Verifique se o e-mail está correto.");
+        return;
+      }
+
+      if (data.status === 'pendente') {
+        setError("Sua conta está aguardando aprovação administrativa.");
+        return;
+      }
+
       setUser(data);
       setState('generator');
-    } catch (e: any) { setError(e.message || "Erro de servidor."); } finally { setLoading(false); }
+    } catch (e: any) {
+      console.error("Login Error:", e);
+      setError("Erro ao conectar ao banco de dados. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGenerate = async (text: string, difficulty: Difficulty) => {
@@ -76,7 +101,7 @@ export default function App() {
     setError(null);
     setCurrentSubject(text.length > 35 ? text.substring(0, 32) + "..." : text);
     setCurrentDifficulty(difficulty);
-    setLoadingMsg("Gerando simulado de 50 questões...");
+    setLoadingMsg("A IA está gerando 50 questões acadêmicas...");
     
     try {
       const data = await generateQuiz(text, difficulty);
@@ -120,14 +145,14 @@ export default function App() {
     content += `Nível: ${currentDifficulty.toUpperCase()}\n`;
     content += `Resultado: ${score}/${quiz.questions.length} (${Math.round((score/quiz.questions.length)*100)}%)\n`;
     content += `Data: ${new Date().toLocaleString()}\n\n`;
-    content += `DETALHAMENTO DE ERROS:\n`;
+    content += `RESUMO DE ERROS:\n`;
     
     quiz.questions.forEach((q, i) => {
       if (userAnswers[i] !== q.correctAnswerIndex) {
-        content += `\n[Questão ${i+1}] ${q.question}\n`;
-        content += `- Sua Resposta: ${q.options[userAnswers[i]] || 'Pulada'}\n`;
-        content += `- Gabarito Correto: ${q.options[q.correctAnswerIndex]}\n`;
-        content += `- Mentor: ${q.mentorTip}\n`;
+        content += `\nQuestão ${i+1}: ${q.question}\n`;
+        content += `Sua Resposta: ${q.options[userAnswers[i]] || 'Em branco'}\n`;
+        content += `Gabarito: ${q.options[q.correctAnswerIndex]}\n`;
+        content += `Explicação: ${q.mentorTip}\n`;
       }
     });
 
@@ -135,7 +160,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `relatorio-simulafacil-${Date.now()}.txt`;
+    a.download = `simulafacil-report-${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -146,12 +171,15 @@ export default function App() {
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <Logo onClick={() => user && setState('generator')} className="cursor-pointer" />
           {user && (
-            <button onClick={() => { setUser(null); setState('login'); }} className="text-xs font-bold text-slate-500 hover:text-rose-400 transition-colors uppercase tracking-widest">Sair</button>
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] text-slate-500 font-bold uppercase hidden md:block">{user.email}</span>
+              <button onClick={() => { setUser(null); setState('login'); }} className="text-xs font-bold text-slate-500 hover:text-rose-400 transition-colors uppercase tracking-widest">Sair</button>
+            </div>
           )}
         </div>
       </nav>
 
-      <main className="flex-grow flex items-center justify-center p-6 relative">
+      <main className="flex-grow flex items-center justify-center p-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-indigo-600/5 blur-[150px] rounded-full pointer-events-none" />
         <div className="w-full max-w-5xl z-10">
           {state === 'login' && <LoginCard onLogin={handleLogin} loading={loading} error={error} />}
@@ -168,12 +196,24 @@ export default function App() {
 const LoginCard: React.FC<{ onLogin: (e: string) => void; loading: boolean; error: string | null }> = ({ onLogin, loading, error }) => {
   const [email, setEmail] = useState('');
   return (
-    <div className="max-w-md mx-auto bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-12 rounded-[3rem] shadow-2xl">
-      <Logo size="lg" className="justify-center mb-8" />
+    <div className="max-w-md mx-auto bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-12 rounded-[3rem] shadow-2xl animate-in fade-in zoom-in duration-300">
+      <Logo size="lg" className="justify-center mb-10" />
       <form onSubmit={e => { e.preventDefault(); onLogin(email); }} className="space-y-6">
-        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-slate-950/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-indigo-500 transition text-white" placeholder="Seu e-mail..." />
-        {error && <p className="text-rose-400 text-xs font-bold bg-rose-400/10 p-4 rounded-xl border border-rose-400/20">{error}</p>}
-        <button disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl transition-all shadow-lg shadow-indigo-600/20">{loading ? 'Entrando...' : 'Acessar'}</button>
+        <div>
+          <label className="text-[10px] font-black uppercase text-slate-500 ml-4 mb-2 block tracking-widest italic">Acesso Restrito</label>
+          <input 
+            type="email" 
+            value={email} 
+            onChange={e => setEmail(e.target.value)} 
+            required 
+            className="w-full bg-slate-950/50 border border-slate-700 p-5 rounded-2xl outline-none focus:border-indigo-500 transition text-white placeholder:text-slate-600 shadow-inner" 
+            placeholder="Seu e-mail cadastrado" 
+          />
+        </div>
+        {error && <div className="text-rose-400 text-[11px] font-bold bg-rose-400/10 p-4 rounded-xl border border-rose-400/20 animate-pulse">{error}</div>}
+        <button disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 active:scale-95 disabled:opacity-50">
+          {loading ? 'Validando...' : 'Iniciar Sessão'}
+        </button>
       </form>
     </div>
   );
@@ -181,9 +221,14 @@ const LoginCard: React.FC<{ onLogin: (e: string) => void; loading: boolean; erro
 
 const LoadingView: React.FC<{ message: string }> = ({ message }) => (
   <div className="text-center py-20 space-y-8 animate-in fade-in">
-    <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
-    <h3 className="text-2xl font-black text-white animate-pulse">{message}</h3>
-    <p className="text-slate-500">Isso pode levar alguns minutos devido ao volume de 50 questões.</p>
+    <div className="relative w-24 h-24 mx-auto">
+      <div className="absolute inset-0 border-4 border-indigo-600/20 rounded-full" />
+      <div className="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+    <div className="space-y-2">
+      <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">{message}</h3>
+      <p className="text-slate-500 text-sm font-medium">Processando estrutura avançada de 50 questões acadêmicas...</p>
+    </div>
   </div>
 );
 
@@ -191,41 +236,62 @@ const GeneratorCard: React.FC<{ onGenerate: (t: string, d: Difficulty) => void; 
   const [text, setText] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('médio');
   return (
-    <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-10 rounded-[3rem] shadow-2xl">
-      <div className="flex justify-between items-start mb-8">
+    <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-10 rounded-[3rem] shadow-2xl animate-in slide-in-from-bottom-5">
+      <div className="flex justify-between items-start mb-10">
         <div>
-          <h2 className="text-4xl font-black text-white italic tracking-tighter">Novo Simulado</h2>
-          <p className="text-slate-500 text-sm">Geração acadêmica de 50 questões.</p>
+          <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">Gerar Simulado</h2>
+          <p className="text-slate-500 text-sm font-medium mt-1">Defina o tema para receber 50 questões exclusivas.</p>
         </div>
-        {hasHistory && <button onClick={onViewHistory} className="text-xs font-bold text-indigo-400 hover:text-white uppercase tracking-widest bg-indigo-500/10 px-6 py-3 rounded-xl border border-indigo-500/20 transition-all">Ranking Local</button>}
+        {hasHistory && <button onClick={onViewHistory} className="text-[10px] font-black text-indigo-400 hover:text-white uppercase tracking-widest bg-indigo-500/10 px-6 py-4 rounded-xl border border-indigo-500/20 transition-all hover:shadow-lg">Meus Resultados</button>}
       </div>
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      
+      <div className="grid grid-cols-3 gap-4 mb-8">
         {(['fácil', 'médio', 'difícil'] as Difficulty[]).map(d => (
-          <button key={d} onClick={() => setDifficulty(d)} className={`py-4 rounded-2xl border font-black capitalize transition-all ${difficulty === d ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20' : 'bg-slate-950/40 border-slate-700 text-slate-500 hover:border-slate-500'}`}>{d}</button>
+          <button key={d} onClick={() => setDifficulty(d)} className={`py-4 rounded-2xl border font-black capitalize transition-all text-xs tracking-widest ${difficulty === d ? 'bg-indigo-600 border-indigo-500 text-white shadow-xl shadow-indigo-600/30 scale-105' : 'bg-slate-950/40 border-slate-800 text-slate-500 hover:border-slate-600'}`}>{d}</button>
         ))}
       </div>
-      <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Digite o tema para as 50 questões..." className="w-full h-48 bg-slate-950/50 border border-slate-700 p-6 rounded-[2rem] outline-none focus:border-indigo-500 transition text-slate-300 resize-none mb-6 shadow-inner" />
-      {error && <p className="mb-6 text-rose-400 text-xs font-bold bg-rose-400/10 p-4 rounded-xl border border-rose-400/20">{error}</p>}
-      <button onClick={() => onGenerate(text, difficulty)} className="w-full py-6 bg-white text-slate-950 font-black rounded-[2rem] hover:bg-indigo-50 transition-all uppercase tracking-widest shadow-2xl">Gerar Simulado Completo</button>
+
+      <div className="relative mb-8">
+        <textarea 
+          value={text} 
+          onChange={e => setText(e.target.value)} 
+          placeholder="Cole aqui um texto base ou digite o tema específico do simulado..." 
+          className="w-full h-56 bg-slate-950/50 border border-slate-800 p-8 rounded-[2.5rem] outline-none focus:border-indigo-500 transition text-slate-300 resize-none shadow-inner text-lg placeholder:text-slate-700" 
+        />
+        <div className="absolute bottom-6 right-8 text-[10px] font-black text-slate-600 uppercase tracking-widest">
+          Modo Acadêmico Ativo
+        </div>
+      </div>
+
+      {error && <div className="mb-8 text-rose-400 text-xs font-bold bg-rose-400/10 p-5 rounded-2xl border border-rose-400/20 animate-pulse">{error}</div>}
+      
+      <button onClick={() => onGenerate(text, difficulty)} className="w-full py-7 bg-white text-slate-950 font-black rounded-[2.5rem] hover:bg-indigo-50 transition-all uppercase tracking-[0.2em] shadow-2xl active:scale-95 group overflow-hidden relative">
+        <span className="relative z-10">Gerar 50 Questões</span>
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+      </button>
     </div>
   );
 };
 
 const QuizView: React.FC<{ question: Question; total: number; current: number; onSelect: (idx: number) => void }> = ({ question, total, current, onSelect }) => (
   <div className="max-w-3xl mx-auto space-y-8 animate-in slide-in-from-right-10">
-    <div className="flex justify-between items-center bg-slate-900/40 p-6 rounded-3xl border border-slate-800">
-      <h3 className="text-xl font-black text-white italic">Questão {current} de {total}</h3>
-      <div className="w-32 h-2 bg-slate-800 rounded-full overflow-hidden">
-        <div className="h-full bg-indigo-600 transition-all duration-300" style={{ width: `${(current/total)*100}%` }} />
+    <div className="flex justify-between items-center bg-slate-900/40 p-6 rounded-3xl border border-slate-800 backdrop-blur-md">
+      <div>
+        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Questão {current}</h3>
+        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">de {total} itens</p>
+      </div>
+      <div className="w-48 h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
+        <div className="h-full bg-gradient-to-r from-indigo-600 to-violet-600 transition-all duration-500" style={{ width: `${(current/total)*100}%` }} />
       </div>
     </div>
-    <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-10 rounded-[3rem] shadow-2xl">
-      <p className="text-xl font-bold text-white mb-10 leading-relaxed">{question.question}</p>
-      <div className="grid grid-cols-1 gap-4">
+    
+    <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-12 rounded-[3.5rem] shadow-2xl">
+      <p className="text-2xl font-bold text-white mb-12 leading-relaxed tracking-tight">{question.question}</p>
+      <div className="grid grid-cols-1 gap-5">
         {question.options.map((opt, i) => (
-          <button key={i} onClick={() => onSelect(i)} className="group flex items-center gap-5 p-6 bg-slate-950/40 border border-slate-700 rounded-2xl text-left hover:border-indigo-500 hover:bg-indigo-500/5 transition-all">
-            <span className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-black text-xs text-slate-500 group-hover:bg-indigo-600 group-hover:text-white transition-colors">{String.fromCharCode(65 + i)}</span>
-            <span className="text-slate-300 group-hover:text-white transition-colors">{opt}</span>
+          <button key={i} onClick={() => onSelect(i)} className="group flex items-center gap-6 p-6 bg-slate-950/40 border border-slate-800 rounded-2xl text-left hover:border-indigo-500 hover:bg-indigo-500/5 transition-all active:scale-[0.98]">
+            <span className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center font-black text-sm text-slate-500 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-md">{String.fromCharCode(65 + i)}</span>
+            <span className="text-slate-300 group-hover:text-white transition-colors text-lg font-medium">{opt}</span>
           </button>
         ))}
       </div>
@@ -248,56 +314,66 @@ const ResultView: React.FC<{ quiz: QuizData; userAnswers: number[]; onRestart: (
   const off = circ - (animatedScore / quiz.questions.length) * circ;
 
   return (
-    <div className="space-y-10 py-10 animate-in fade-in duration-700">
-      <div className={`p-10 rounded-[4rem] border ${status.border} ${status.bg} backdrop-blur-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-12`}>
-        <div className="space-y-6 text-center md:text-left">
-          <h2 className="text-6xl font-black text-white italic tracking-tighter">{status.icon} {status.label}</h2>
-          <p className="text-slate-300 font-medium text-lg max-w-sm">{status.msg}</p>
-          <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-            <button onClick={onDownload} className="px-6 py-4 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 text-[10px] font-black uppercase text-white transition-all shadow-lg">Download Relatório</button>
-            <button onClick={onRestart} className="px-8 py-4 bg-white text-slate-950 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-indigo-50 transition-all">Novo Simulado</button>
+    <div className="space-y-12 py-10 animate-in fade-in duration-1000">
+      <div className={`p-12 rounded-[4rem] border ${status.border} ${status.bg} backdrop-blur-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-16 relative overflow-hidden`}>
+        <div className="absolute -top-20 -left-20 w-64 h-64 bg-white/5 blur-[100px] rounded-full pointer-events-none" />
+        
+        <div className="space-y-8 text-center md:text-left z-10">
+          <div>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2 block">Avaliação Final</span>
+            <h2 className="text-7xl font-black text-white italic tracking-tighter uppercase">{status.icon} {status.label}</h2>
+          </div>
+          <p className="text-slate-300 font-medium text-xl max-w-md leading-relaxed">{status.msg}</p>
+          <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+            <button onClick={onDownload} className="px-8 py-5 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 text-[11px] font-black uppercase text-white transition-all shadow-xl backdrop-blur-lg active:scale-95">Download PDF/Relatório</button>
+            <button onClick={onRestart} className="px-10 py-5 bg-white text-slate-950 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-2xl hover:bg-indigo-50 transition-all active:scale-95">Reiniciar</button>
           </div>
         </div>
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-56 h-56 rounded-full flex items-center justify-center relative bg-slate-950/40 border border-slate-800 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
+
+        <div className="flex flex-col items-center gap-6 z-10">
+          <div className="w-64 h-64 rounded-full flex items-center justify-center relative bg-slate-950/60 border border-slate-800 shadow-2xl overflow-hidden">
+             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent" />
             <svg className="absolute inset-0 w-full h-full -rotate-90">
-              <circle cx="112" cy="112" r={radius} fill="transparent" stroke="currentColor" strokeWidth="16" className="text-slate-800" />
-              <circle cx="112" cy="112" r={radius} fill="transparent" stroke="currentColor" strokeWidth="16" 
-                className={`${status.color} transition-all duration-[2000ms] ease-out drop-shadow-[0_0_8px_currentColor]`} 
+              <circle cx="128" cy="128" r={radius} fill="transparent" stroke="rgba(30, 41, 59, 0.5)" strokeWidth="18" />
+              <circle cx="128" cy="128" r={radius} fill="transparent" stroke="currentColor" strokeWidth="18" 
+                className={`${status.color} transition-all duration-[2500ms] ease-out drop-shadow-[0_0_15px_currentColor]`} 
                 strokeDasharray={circ} strokeDashoffset={isNaN(off) ? circ : off} strokeLinecap="round" />
             </svg>
-            <div className="text-center z-10 animate-in zoom-in duration-500 delay-300">
-              <p className="text-7xl font-black text-white">{score}</p>
-              <p className="text-xs font-black text-slate-500 uppercase tracking-widest">de {quiz.questions.length}</p>
+            <div className="text-center z-10 animate-in zoom-in duration-700 delay-500">
+              <p className="text-8xl font-black text-white tracking-tighter">{score}</p>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1">Acertos</p>
             </div>
           </div>
-          <div className="text-xs font-black uppercase tracking-widest text-slate-500 mt-2">
-            Aproveitamento: {Math.round((score/quiz.questions.length)*100)}%
+          <div className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-500 bg-slate-900/80 px-6 py-2 rounded-full border border-slate-800">
+            Rating: {Math.round((score/quiz.questions.length)*100)}%
           </div>
         </div>
       </div>
       
-      <div className="space-y-6">
-        <h4 className="text-2xl font-black text-white italic ml-4 border-l-4 border-indigo-600 pl-4 uppercase tracking-tighter">Resumo de Erros</h4>
-        <div className="grid grid-cols-1 gap-4">
+      <div className="space-y-8">
+        <h4 className="text-3xl font-black text-white italic ml-6 border-l-8 border-indigo-600 pl-6 uppercase tracking-tighter">Detalhamento Técnico</h4>
+        <div className="grid grid-cols-1 gap-6">
           {quiz.questions.map((q, i) => userAnswers[i] !== q.correctAnswerIndex && (
-            <div key={i} className="bg-slate-900/40 border border-slate-800 p-8 rounded-[2.5rem] animate-in fade-in slide-in-from-bottom-5">
-              <p className="text-lg font-bold text-white mb-4 leading-relaxed">#{i+1} — {q.question}</p>
-              <div className="flex flex-col md:flex-row gap-4 mb-4">
-                <div className="flex-1 p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10 text-rose-400 text-sm">
-                  <span className="text-[10px] font-black uppercase block mb-1 opacity-60">Sua Resposta</span>
-                  {q.options[userAnswers[i]] || 'Não respondida'}
+            <div key={i} className="bg-slate-900/40 border border-slate-800 p-10 rounded-[3rem] animate-in fade-in slide-in-from-bottom-8 transition-all hover:border-slate-700">
+              <div className="flex items-start gap-4 mb-8">
+                <span className="w-10 h-10 shrink-0 bg-rose-500/20 text-rose-400 rounded-full flex items-center justify-center font-black text-xs">#{i+1}</span>
+                <p className="text-xl font-bold text-white leading-tight mt-1">{q.question}</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+                <div className="p-6 rounded-3xl bg-rose-500/5 border border-rose-500/10 relative overflow-hidden">
+                  <span className="text-[9px] font-black uppercase text-rose-500/50 mb-3 block tracking-widest italic">Input Incorreto</span>
+                  <p className="text-rose-400 font-medium">{q.options[userAnswers[i]] || 'Sem resposta'}</p>
                 </div>
-                <div className="flex-1 p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 text-sm font-bold">
-                  <span className="text-[10px] font-black uppercase block mb-1 opacity-60 text-emerald-500/60">Gabarito Correto</span>
-                  {q.options[q.correctAnswerIndex]}
+                <div className="p-6 rounded-3xl bg-emerald-500/5 border border-emerald-500/10 relative overflow-hidden">
+                   <span className="text-[9px] font-black uppercase text-emerald-500/50 mb-3 block tracking-widest italic">Gabarito Oficial</span>
+                  <p className="text-emerald-400 font-bold">{q.options[q.correctAnswerIndex]}</p>
                 </div>
               </div>
-              <div className="p-5 rounded-2xl bg-indigo-600/10 italic text-indigo-100/80 text-sm border border-indigo-500/20 flex gap-3">
-                <div className="w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <div className="p-8 rounded-[2rem] bg-indigo-600/10 border border-indigo-500/20 flex gap-5 items-center italic">
+                <div className="w-12 h-12 bg-indigo-600/20 rounded-2xl flex items-center justify-center shrink-0">
+                  <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0012 18.75c-1.03 0-1.9-.4-2.593-1.003l-.548-.547z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
-                "{q.mentorTip}"
+                <p className="text-indigo-200/90 text-sm leading-relaxed font-medium">"{q.mentorTip}"</p>
               </div>
             </div>
           ))}
@@ -308,37 +384,51 @@ const ResultView: React.FC<{ quiz: QuizData; userAnswers: number[]; onRestart: (
 };
 
 const HistoryView: React.FC<{ history: HistoryItem[]; onBack: () => void }> = ({ history, onBack }) => (
-  <div className="max-w-4xl mx-auto space-y-10 animate-in slide-in-from-bottom-10">
-    <div className="flex justify-between items-center px-4">
+  <div className="max-w-5xl mx-auto space-y-12 animate-in slide-in-from-bottom-10">
+    <div className="flex justify-between items-end px-6">
       <div>
-        <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">Histórico de <span className="text-indigo-500">Desempenho</span></h2>
-        <p className="text-slate-500 text-sm">Registro dos últimos 100 simulados.</p>
+        <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter">Histórico Acadêmico</h2>
+        <p className="text-slate-500 text-sm font-medium mt-2">Relatórios consolidados de simulados gerados por IA.</p>
       </div>
-      <button onClick={onBack} className="text-[10px] font-black uppercase text-slate-400 bg-white/5 border border-white/5 px-8 py-4 rounded-2xl hover:bg-white/10 transition-all">Voltar</button>
+      <button onClick={onBack} className="text-[10px] font-black uppercase text-slate-400 bg-white/5 border border-white/10 px-10 py-5 rounded-2xl hover:bg-white/10 transition-all tracking-widest">Voltar ao Início</button>
     </div>
-    <div className="bg-slate-900/40 border border-slate-800 rounded-[3rem] overflow-hidden shadow-2xl">
+    
+    <div className="bg-slate-900/40 border border-slate-800 rounded-[3.5rem] overflow-hidden shadow-2xl backdrop-blur-md">
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-slate-950/80 text-[10px] font-black uppercase text-slate-500 border-b border-slate-800">
-            <tr><th className="px-10 py-8">Simulado</th><th className="px-10 py-8">Nível</th><th className="px-10 py-8 text-right">Nota Final</th></tr>
+            <tr>
+              <th className="px-12 py-10 tracking-[0.2em]">Conteúdo/Tema</th>
+              <th className="px-12 py-10 tracking-[0.2em]">Nível</th>
+              <th className="px-12 py-10 text-right tracking-[0.2em]">Score Final</th>
+            </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/50">
+          <tbody className="divide-y divide-slate-800/40">
             {history.map(item => (
-              <tr key={item.id} className="hover:bg-indigo-600/5 transition-all group">
-                <td className="px-10 py-8">
-                  <p className="font-bold text-slate-200 text-lg group-hover:text-white transition-colors">{item.subject}</p>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{item.date}</p>
+              <tr key={item.id} className="hover:bg-indigo-600/5 transition-all group cursor-default">
+                <td className="px-12 py-10">
+                  <p className="font-bold text-slate-100 text-xl group-hover:text-white transition-colors tracking-tight">{item.subject}</p>
+                  <p className="text-[10px] text-slate-600 font-black uppercase mt-2 tracking-widest">{item.date}</p>
                 </td>
-                <td className="px-10 py-8">
-                  <span className="px-3 py-1 bg-slate-800 rounded-lg text-[10px] font-black uppercase text-slate-400 border border-slate-700">{item.difficulty}</span>
+                <td className="px-12 py-10">
+                  <span className="px-5 py-2 bg-slate-800/50 rounded-xl text-[10px] font-black uppercase text-slate-400 border border-slate-700 group-hover:border-slate-500 transition-colors">{item.difficulty}</span>
                 </td>
-                <td className="px-10 py-8 text-right font-black text-2xl text-indigo-400">{item.correct} <span className="text-xs text-slate-600">/ {item.total}</span></td>
+                <td className="px-12 py-10 text-right">
+                   <div className="flex flex-col items-end">
+                    <span className="text-3xl font-black text-indigo-400 group-hover:text-indigo-300 transition-colors leading-none">{item.correct}</span>
+                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest mt-1">de {item.total}</span>
+                   </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {history.length === 0 && <div className="p-20 text-center text-slate-600 font-medium italic">Nenhum registro encontrado.</div>}
+      {history.length === 0 && (
+        <div className="p-32 text-center text-slate-700 font-black uppercase tracking-[0.3em] italic opacity-50">
+          Nenhum dado registrado no sistema.
+        </div>
+      )}
     </div>
   </div>
 );
