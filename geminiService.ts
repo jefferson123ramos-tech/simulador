@@ -12,26 +12,28 @@ const cleanJsonResponse = (text: string): string => {
 };
 
 export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
-  // 1. Pega a chave na hora da execução para garantir que o ambiente esteja carregado
-  const apiKey = process.env.API_KEY;
+  // 1. Acesso correto via Vite Environment Variables
+  // @ts-ignore
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
-  // 2. Trava de segurança: Se não tiver chave, lança erro
+  // 2. Trava de segurança para produção
   if (!apiKey) {
-    throw new Error("ERRO CRÍTICO: Chave API não encontrada (process.env.API_KEY).");
+    throw new Error("ERRO CRÍTICO: Chave API não encontrada. Verifique se VITE_GEMINI_API_KEY está configurada no seu arquivo .env ou na plataforma de deploy.");
   }
 
-  // 3. Inicializa a IA somente agora, dentro do escopo da função
+  // 3. Inicialização segura no momento da chamada
   const ai = new GoogleGenAI({ apiKey });
   
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Gere um simulado acadêmico de ALTA QUALIDADE com EXATAMENTE 50 questões de múltipla escolha (4 opções cada) sobre o tema: "${text}".
+      contents: `Gere um simulado acadêmico PROFISSIONAL e DETALHADO com EXATAMENTE 50 questões de múltipla escolha (4 opções cada) sobre: "${text}".
 
       ESTRUTURA OBRIGATÓRIA:
-      - Nível de Dificuldade: ${difficulty.toUpperCase()}.
-      - Campo mentorTip: Uma dica técnica ou explicação curta (máximo 12 palavras) para quem errar.
-      - Retorne estritamente um JSON puro, sem explicações fora do bloco.`,
+      - Dificuldade: ${difficulty.toUpperCase()}.
+      - Campo mentorTip: Explicação técnica da resposta correta (máximo 12 palavras).
+      - Idioma: Português do Brasil.
+      - Retorne APENAS o JSON puro.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -63,13 +65,13 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
     const jsonStr = cleanJsonResponse(response.text || "");
     const parsed = JSON.parse(jsonStr) as QuizData;
     
-    if (!parsed.questions || parsed.questions.length === 0) {
-      throw new Error("A IA não retornou questões válidas.");
+    if (!parsed.questions || parsed.questions.length < 1) {
+      throw new Error("A IA retornou um conjunto vazio de questões.");
     }
 
     return parsed;
   } catch (e: any) {
-    console.error("Erro na geração:", e);
-    throw new Error("Falha ao gerar as 50 questões. Detalhes: " + (e.message || "Erro desconhecido"));
+    console.error("Erro na geração Gemini:", e);
+    throw new Error("Falha ao processar simulado de 50 questões. Verifique sua cota da API ou conexão.");
   }
 };
