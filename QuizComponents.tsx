@@ -19,8 +19,8 @@ export const Logo: React.FC<{ size?: 'sm' | 'lg', className?: string, onClick?: 
       </div>
       <div className="flex flex-col">
         <h1 className={`${isLarge ? 'text-4xl' : 'text-xl'} font-black tracking-tighter uppercase leading-none italic`}>
-          <span className="text-white">Simula</span>
-          <span className="text-indigo-500">facil</span>
+          <span className="text-white">Simulado</span>
+          <span className="text-indigo-500">AI</span>
         </h1>
       </div>
     </div>
@@ -42,12 +42,12 @@ export const LoginCard: React.FC<{ onLogin: (e: string) => void; loading: boolea
             onChange={e => setEmail(e.target.value)} 
             required 
             className="w-full bg-slate-950/50 border border-slate-700 p-5 rounded-2xl outline-none focus:border-indigo-500 transition text-white placeholder:text-slate-600 shadow-inner" 
-            placeholder="Digite seu e-mail de aluno" 
+            placeholder="E-mail do estudante" 
           />
         </div>
         {error && <div className="text-rose-400 text-[11px] font-bold bg-rose-400/10 p-4 rounded-xl border border-rose-400/20">{error}</div>}
         <button disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 active:scale-95 disabled:opacity-50">
-          {loading ? 'Verificando Cadastro...' : 'Entrar no Portal'}
+          {loading ? 'Acessando Portal...' : 'Entrar Agora'}
         </button>
       </form>
     </div>
@@ -63,7 +63,7 @@ export const LoadingView: React.FC<{ message: string }> = ({ message }) => (
     </div>
     <div className="space-y-2">
       <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase">{message}</h3>
-      <p className="text-slate-500 text-sm font-medium italic">Aguarde, processando 50 questões com alta precisão...</p>
+      <p className="text-slate-500 text-sm font-medium italic">A IA está processando 50 itens exclusivos para você...</p>
     </div>
   </div>
 );
@@ -77,9 +77,9 @@ export const GeneratorCard: React.FC<{ onGenerate: (t: string, d: Difficulty) =>
       <div className="flex justify-between items-start mb-10">
         <div>
           <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">Novo Simulado</h2>
-          <p className="text-slate-500 text-sm font-medium mt-1">Geraremos 50 questões baseadas no seu tema.</p>
+          <p className="text-slate-500 text-sm font-medium mt-1">Geraremos um teste completo com 50 questões.</p>
         </div>
-        {hasHistory && <button onClick={onViewHistory} className="text-[10px] font-black text-indigo-400 hover:text-white uppercase tracking-widest bg-indigo-500/10 px-6 py-4 rounded-xl border border-indigo-500/20 transition-all hover:shadow-lg">Ver Evolução</button>}
+        {hasHistory && <button onClick={onViewHistory} className="text-[10px] font-black text-indigo-400 hover:text-white uppercase tracking-widest bg-indigo-500/10 px-6 py-4 rounded-xl border border-indigo-500/20 transition-all hover:shadow-lg">Meu Histórico</button>}
       </div>
       <div className="grid grid-cols-3 gap-4 mb-8">
         {(['fácil', 'médio', 'difícil'] as Difficulty[]).map(d => (
@@ -87,8 +87,8 @@ export const GeneratorCard: React.FC<{ onGenerate: (t: string, d: Difficulty) =>
         ))}
       </div>
       <div className="relative mb-8">
-        <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Cole aqui seu conteúdo de estudo ou digite um tema amplo..." className="w-full h-56 bg-slate-950/50 border border-slate-800 p-8 rounded-[2.5rem] outline-none focus:border-indigo-500 transition text-slate-300 resize-none shadow-inner text-lg placeholder:text-slate-700" />
-        <div className="absolute bottom-6 right-8 text-[10px] font-black text-slate-600 uppercase tracking-widest">Modo IA Intensivo</div>
+        <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Descreva o tema ou cole seu material de estudo aqui..." className="w-full h-56 bg-slate-950/50 border border-slate-800 p-8 rounded-[2.5rem] outline-none focus:border-indigo-500 transition text-slate-300 resize-none shadow-inner text-lg placeholder:text-slate-700" />
+        <div className="absolute bottom-6 right-8 text-[10px] font-black text-slate-600 uppercase tracking-widest">Motor Gemini 3.0</div>
       </div>
       {error && <div className="mb-8 text-rose-400 text-xs font-bold bg-rose-400/10 p-5 rounded-2xl border border-rose-400/20">{error}</div>}
       <button onClick={() => onGenerate(text, difficulty)} className="w-full py-7 bg-white text-slate-950 font-black rounded-[2.5rem] hover:bg-indigo-50 transition-all uppercase tracking-[0.2em] shadow-2xl active:scale-95 group overflow-hidden relative">
@@ -103,8 +103,8 @@ export const QuizView: React.FC<{ question: Question; total: number; current: nu
   <div className="max-w-3xl mx-auto space-y-8 animate-in slide-in-from-right-10">
     <div className="flex justify-between items-center bg-slate-900/40 p-6 rounded-3xl border border-slate-800 backdrop-blur-md shadow-lg">
       <div>
-        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Item {current}</h3>
-        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Progresso: {Math.round((current/total)*100)}%</p>
+        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Questão {current} / {total}</h3>
+        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Desempenho: {Math.round((current/total)*100)}% concluído</p>
       </div>
       <div className="w-48 h-2 bg-slate-800 rounded-full overflow-hidden shadow-inner">
         <div className="h-full bg-gradient-to-r from-indigo-600 to-violet-600 transition-all duration-500" style={{ width: `${(current/total)*100}%` }} />
@@ -129,9 +129,9 @@ export const ResultView: React.FC<{ quiz: QuizData; userAnswers: number[]; onRes
   const score = userAnswers.reduce((acc, ans, idx) => acc + (ans === quiz.questions[idx].correctAnswerIndex ? 1 : 0), 0);
   const getGradeStatus = (s: number, t: number) => {
     const p = (s / t) * 100;
-    if (p >= 70) return { label: 'APROVADO', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: '🏆', msg: 'Desempenho de excelência! Domínio profissional do conteúdo.' };
-    if (p >= 50) return { label: 'RECUPERAÇÃO', color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: '⚡', msg: 'Bom progresso, mas revise as questões incorretas.' };
-    return { label: 'REPROVADO', color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20', icon: '📚', msg: 'Atenção necessária: O conteúdo exige mais dedicação.' };
+    if (p >= 70) return { label: 'APROVADO', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: '🏆', msg: 'Excepcional! Você demonstra um domínio avançado do conteúdo.' };
+    if (p >= 50) return { label: 'RECUPERAÇÃO', color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: '⚡', msg: 'Bom trabalho, mas ainda há pontos importantes para revisão.' };
+    return { label: 'REPROVADO', color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20', icon: '📚', msg: 'Atenção: Recomendamos reforçar seus estudos neste tema.' };
   };
   const status = getGradeStatus(score, quiz.questions.length);
   const [animatedScore, setAnimatedScore] = useState(0);
@@ -146,13 +146,13 @@ export const ResultView: React.FC<{ quiz: QuizData; userAnswers: number[]; onRes
       <div className={`p-12 rounded-[4rem] border ${status.border} ${status.bg} backdrop-blur-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-16 relative overflow-hidden`}>
         <div className="space-y-8 text-center md:text-left z-10">
           <div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2 block">Relatório de Desempenho</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2 block">Performance SimuladoAI</span>
             <h2 className="text-7xl font-black text-white italic tracking-tighter uppercase">{status.icon} {status.label}</h2>
           </div>
           <p className="text-slate-300 font-medium text-xl max-w-md leading-relaxed">{status.msg}</p>
           <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-            <button onClick={onDownload} className="px-8 py-5 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 text-[11px] font-black uppercase text-white transition-all shadow-xl active:scale-95">Relatório TXT</button>
-            <button onClick={onRestart} className="px-10 py-5 bg-white text-slate-950 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-2xl hover:bg-indigo-50 transition-all active:scale-95">Novo Teste</button>
+            <button onClick={onDownload} className="px-8 py-5 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 text-[11px] font-black uppercase text-white transition-all shadow-xl active:scale-95">Baixar Relatório</button>
+            <button onClick={onRestart} className="px-10 py-5 bg-white text-slate-950 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-2xl hover:bg-indigo-50 transition-all active:scale-95">Reiniciar</button>
           </div>
         </div>
         <div className="flex flex-col items-center gap-6 z-10">
@@ -168,11 +168,11 @@ export const ResultView: React.FC<{ quiz: QuizData; userAnswers: number[]; onRes
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Acertos</p>
             </div>
           </div>
-          <div className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-500 bg-slate-900/80 px-6 py-2 rounded-full border border-slate-800">Rating: {Math.round((score/quiz.questions.length)*100)}%</div>
+          <div className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-500 bg-slate-900/80 px-6 py-2 rounded-full border border-slate-800">Taxa: {Math.round((score/quiz.questions.length)*100)}%</div>
         </div>
       </div>
       <div className="space-y-8">
-        <h4 className="text-3xl font-black text-white italic ml-6 border-l-8 border-indigo-600 pl-6 uppercase tracking-tighter">Questões Revisadas</h4>
+        <h4 className="text-3xl font-black text-white italic ml-6 border-l-8 border-indigo-600 pl-6 uppercase tracking-tighter">Análise de Erros</h4>
         <div className="grid grid-cols-1 gap-6">
           {quiz.questions.map((q, i) => userAnswers[i] !== q.correctAnswerIndex && (
             <div key={i} className="bg-slate-900/40 border border-slate-800 p-10 rounded-[3rem] animate-in fade-in slide-in-from-bottom-8">
@@ -182,15 +182,15 @@ export const ResultView: React.FC<{ quiz: QuizData; userAnswers: number[]; onRes
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
                 <div className="p-6 rounded-3xl bg-rose-500/5 border border-rose-500/10">
-                  <span className="text-[9px] font-black uppercase text-rose-500/50 mb-3 block">Sua Escolha</span>
-                  <p className="text-rose-400 font-medium">{q.options[userAnswers[i]] || 'Pulo'}</p>
+                  <span className="text-[9px] font-black uppercase text-rose-500/50 mb-3 block">Resposta Fornecida</span>
+                  <p className="text-rose-400 font-medium">{q.options[userAnswers[i]] || 'Não respondida'}</p>
                 </div>
                 <div className="p-6 rounded-3xl bg-emerald-500/5 border border-emerald-500/10">
-                   <span className="text-[9px] font-black uppercase text-emerald-500/50 mb-3 block">Correto</span>
+                   <span className="text-[9px] font-black uppercase text-emerald-500/50 mb-3 block">Gabarito Oficial</span>
                   <p className="text-emerald-400 font-bold">{q.options[q.correctAnswerIndex]}</p>
                 </div>
               </div>
-              <div className="p-8 rounded-[2rem] bg-indigo-600/10 border border-indigo-500/20 italic text-indigo-200/90 text-sm leading-relaxed">"{q.mentorTip}"</div>
+              <div className="p-8 rounded-[2rem] bg-indigo-600/10 border border-indigo-500/20 italic text-indigo-200/90 text-sm leading-relaxed">Explicação: "{q.mentorTip}"</div>
             </div>
           ))}
         </div>
@@ -204,16 +204,16 @@ export const HistoryView: React.FC<{ history: HistoryItem[]; onBack: () => void 
   <div className="max-w-5xl mx-auto space-y-12 animate-in slide-in-from-bottom-10">
     <div className="flex justify-between items-end px-6">
       <div>
-        <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter">Histórico</h2>
-        <p className="text-slate-500 text-sm font-medium">Relatórios consolidados de simulados passados.</p>
+        <h2 className="text-5xl font-black text-white italic uppercase tracking-tighter">Evolução</h2>
+        <p className="text-slate-500 text-sm font-medium">Histórico de desempenho em simulados gerados por IA.</p>
       </div>
-      <button onClick={onBack} className="text-[10px] font-black uppercase text-slate-400 bg-white/5 border border-white/10 px-10 py-5 rounded-2xl hover:bg-white/10 transition-all">Voltar</button>
+      <button onClick={onBack} className="text-[10px] font-black uppercase text-slate-400 bg-white/5 border border-white/10 px-10 py-5 rounded-2xl hover:bg-white/10 transition-all">Voltar ao Gerador</button>
     </div>
     <div className="bg-slate-900/40 border border-slate-800 rounded-[3.5rem] overflow-hidden shadow-2xl">
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-slate-950/80 text-[10px] font-black uppercase text-slate-500 border-b border-slate-800">
-            <tr><th className="px-12 py-10">Conteúdo</th><th className="px-12 py-10">Nível</th><th className="px-12 py-10 text-right">Acertos</th></tr>
+            <tr><th className="px-12 py-10">Conteúdo Estudado</th><th className="px-12 py-10">Nível</th><th className="px-12 py-10 text-right">Resultado</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-800/40">
             {history.map(item => (
@@ -227,10 +227,13 @@ export const HistoryView: React.FC<{ history: HistoryItem[]; onBack: () => void 
                 </td>
                 <td className="px-12 py-10 text-right">
                     <span className="text-3xl font-black text-indigo-400">{item.correct}</span>
-                    <span className="text-[10px] font-black text-slate-700 uppercase ml-2">de {item.total}</span>
+                    <span className="text-[10px] font-black text-slate-700 uppercase ml-2">/ {item.total}</span>
                 </td>
               </tr>
             ))}
+            {history.length === 0 && (
+              <tr><td colSpan={3} className="px-12 py-20 text-center text-slate-600 font-black uppercase tracking-widest italic">Nenhum simulado realizado ainda</td></tr>
+            )}
           </tbody>
         </table>
       </div>

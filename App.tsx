@@ -27,7 +27,7 @@ export default function App() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('simulafacil_v1_history');
+    const saved = localStorage.getItem('simuladoai_v1_history');
     if (saved) setHistory(JSON.parse(saved));
   }, []);
 
@@ -48,30 +48,38 @@ export default function App() {
 
       if (sbError) throw sbError;
       if (!data) {
-        setError("Acesso negado: E-mail não encontrado na base de dados.");
+        setError("Acesso negado: Este e-mail não possui permissão ativa.");
         return;
       }
       if (data.status === 'pendente') {
-        setError("Cadastro em análise: Aguarde a liberação do administrador.");
+        setError("Conta Pendente: Aguarde a ativação pelo administrador.");
         return;
       }
       setUser(data);
       setState('generator');
     } catch (e: any) {
       console.error("Login process error:", e);
-      setError("Falha técnica ao tentar realizar o login.");
+      setError("Erro técnico ao validar acesso. Tente novamente.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleGenerate = async (text: string, difficulty: Difficulty) => {
-    if (!text.trim()) { setError("O tema ou texto base é obrigatório."); return; }
+    if (!text.trim()) { setError("O tema ou conteúdo base é obrigatório."); return; }
+    
+    // Verificação preventiva da chave antes de iniciar o processo custoso
+    if (!process.env.API_KEY) {
+      setError("Erro de configuração de sistema: Chave API não detectada.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setCurrentSubject(text.length > 35 ? text.substring(0, 32) + "..." : text);
     setCurrentDifficulty(difficulty);
-    setLoadingMsg("Preparando 50 questões acadêmicas...");
+    setLoadingMsg("Gerando 50 questões exclusivas...");
+    
     try {
       const data = await generateQuiz(text, difficulty);
       setQuiz(data);
@@ -79,7 +87,7 @@ export default function App() {
       setCurrentQuestionIndex(0);
       setState('quiz');
     } catch (e: any) { 
-      setError(e.message || "Erro ao gerar simulado com a IA."); 
+      setError(e.message || "A IA falhou em gerar o simulado. Tente simplificar o tema."); 
     } finally { setLoading(false); }
   };
 
@@ -101,7 +109,7 @@ export default function App() {
       };
       const newHistory = [newItem, ...history].slice(0, 100);
       setHistory(newHistory);
-      localStorage.setItem('simulafacil_v1_history', JSON.stringify(newHistory));
+      localStorage.setItem('simuladoai_v1_history', JSON.stringify(newHistory));
       setState('result');
     }
   };
@@ -109,18 +117,19 @@ export default function App() {
   const downloadReport = () => {
     if (!quiz) return;
     const score = userAnswers.reduce((acc, ans, idx) => acc + (ans === quiz.questions[idx].correctAnswerIndex ? 1 : 0), 0);
-    let content = `--- SIMULAFACIL ACADÊMICO ---\n\n`;
-    content += `Tema: ${currentSubject}\nNível: ${currentDifficulty.toUpperCase()}\nScore: ${score}/${quiz.questions.length}\n\n`;
+    let content = `--- RELATÓRIO SIMULADO AI ---\n\n`;
+    content += `Tema: ${currentSubject}\nDificuldade: ${currentDifficulty.toUpperCase()}\nAcertos: ${score}/${quiz.questions.length}\nTaxa: ${Math.round((score/quiz.questions.length)*100)}%\n\n`;
+    content += `QUESTÕES INCORRETAS:\n`;
     quiz.questions.forEach((q, i) => {
       if (userAnswers[i] !== q.correctAnswerIndex) {
-        content += `\nQuestão ${i+1}: ${q.question}\nGabarito: ${q.options[q.correctAnswerIndex]}\nMentor: ${q.mentorTip}\n`;
+        content += `\n[${i+1}] ${q.question}\nSua Resposta: ${q.options[userAnswers[i]] || 'N/A'}\nCorreta: ${q.options[q.correctAnswerIndex]}\nExplicação: ${q.mentorTip}\n`;
       }
     });
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `relatorio-${currentSubject.replace(/\s/g, '-')}.txt`;
+    a.download = `resultado-simulado-ai-${currentSubject.replace(/\s/g, '-')}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -133,7 +142,7 @@ export default function App() {
           {user && (
             <div className="flex items-center gap-4">
               <span className="text-[10px] text-slate-500 font-bold uppercase hidden md:block">{user.email}</span>
-              <button onClick={() => { setUser(null); setState('login'); }} className="text-xs font-bold text-slate-500 hover:text-rose-400 transition-colors uppercase tracking-widest">Sair</button>
+              <button onClick={() => { setUser(null); setState('login'); }} className="text-xs font-bold text-slate-500 hover:text-rose-400 transition-colors uppercase tracking-widest">Desconectar</button>
             </div>
           )}
         </div>
