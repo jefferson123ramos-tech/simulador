@@ -11,28 +11,16 @@ const Logo: React.FC<{ size?: 'sm' | 'lg', className?: string }> = ({ size = 'sm
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       <div className={`relative flex-shrink-0 ${isLarge ? 'w-16 h-16' : 'w-9 h-9'} group`}>
-        {/* Glow de fundo */}
         <div className="absolute inset-0 bg-indigo-500/30 blur-xl rounded-full group-hover:bg-indigo-400/50 transition-all duration-500"></div>
-        
-        {/* Corpo do Logo */}
         <div className={`relative h-full w-full bg-gradient-to-br from-indigo-500 to-violet-700 rounded-xl flex items-center justify-center shadow-lg border border-white/20 overflow-hidden`}>
-          {/* Detalhe interno reflexo */}
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-tr from-white/10 to-transparent pointer-events-none"></div>
-          
-          {/* Ícone customizado (Chapéu Acadêmico + Raio de Inteligência) */}
-          <svg 
-            viewBox="0 0 24 24" 
-            className={`${isLarge ? 'w-10 h-10' : 'w-6 h-6'} text-white fill-current drop-shadow-md`}
-          >
+          <svg viewBox="0 0 24 24" className={`${isLarge ? 'w-10 h-10' : 'w-6 h-6'} text-white fill-current drop-shadow-md`}>
             <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" />
             <circle cx="12" cy="11" r="2" className="animate-pulse text-cyan-300" />
           </svg>
         </div>
-        
-        {/* Anel Externo Brilhante */}
         <div className="absolute -inset-1 border border-indigo-500/20 rounded-2xl scale-110 group-hover:scale-100 transition-transform duration-500"></div>
       </div>
-      
       <div className="flex flex-col">
         <h1 className={`${isLarge ? 'text-4xl' : 'text-xl'} font-black tracking-tighter uppercase leading-none italic flex items-center`}>
           <span className="text-white">Simula</span>
@@ -44,7 +32,6 @@ const Logo: React.FC<{ size?: 'sm' | 'lg', className?: string }> = ({ size = 'sm
   );
 };
 
-// --- Helpers ---
 const getGradeStatus = (score: number, total: number) => {
   const percent = (score / total) * 100;
   if (percent >= 70) return { label: 'APROVADO', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: '🏆', msg: 'Desempenho de excelência! Você demonstrou domínio profissional do conteúdo.' };
@@ -86,21 +73,24 @@ export default function App() {
   const [currentDifficulty, setCurrentDifficulty] = useState<Difficulty>('médio');
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
-  // Carregar histórico persistente do localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('simulafacil_v1_history');
       if (saved) setHistory(JSON.parse(saved));
-    } catch (e) {
-      console.error("Erro ao carregar histórico local");
-    }
+    } catch (e) { console.error("Erro ao carregar histórico local"); }
   }, []);
 
   useEffect(() => {
     if (loading && state === 'generator') {
-      const msgs = ["Gerando questões exclusivas...", "Aplicando nível " + currentDifficulty + "...", "Consultando banco de exames...", "Finalizando seu simulado..."];
+      const msgs = [
+        "Iniciando redação de 50 questões...",
+        "Cruzando referências técnicas...",
+        "Aplicando filtros de nível " + currentDifficulty + "...",
+        "Garantindo a integridade do gabarito...",
+        "Quase lá: formatando relatório final..."
+      ];
       let i = 0;
-      const interval = setInterval(() => { i = (i + 1) % msgs.length; setLoadingMsg(msgs[i]); }, 3000);
+      const interval = setInterval(() => { i = (i + 1) % msgs.length; setLoadingMsg(msgs[i]); }, 3500);
       return () => clearInterval(interval);
     }
   }, [loading, state, currentDifficulty]);
@@ -134,7 +124,7 @@ export default function App() {
       setCurrentQuestionIndex(0);
       setState('quiz');
     } catch (e: any) { 
-      setError(e.message || "Erro ao gerar simulado."); 
+      setError(e.message || "Erro ao gerar simulado longo."); 
     } finally { setLoading(false); }
   };
 
@@ -173,15 +163,15 @@ export default function App() {
     content += `====================================\n`;
     content += `Tema: ${currentSubject}\n`;
     content += `Nível: ${currentDifficulty.toUpperCase()}\n`;
-    content += `Pontuação: ${score} de ${quiz.questions.length}\n`;
+    content += `Pontuação: ${score} de ${quiz.questions.length} (${Math.round((score/quiz.questions.length)*100)}%)\n`;
     content += `Data: ${new Date().toLocaleString()}\n\n`;
-    content += `QUESTÕES INCORRETAS:\n`;
+    content += `RESUMO DOS ERROS:\n`;
     
     quiz.questions.forEach((q, i) => {
       if (userAnswers[i] !== q.correctAnswerIndex) {
-        content += `\n[${i + 1}] ${q.question}\n`;
+        content += `\n[Questão ${i + 1}] ${q.question}\n`;
         content += `Sua resposta: ${q.options[userAnswers[i]] || 'Pulada'}\n`;
-        content += `Gabarito: ${q.options[q.correctAnswerIndex]}\n`;
+        content += `Gabarito correto: ${q.options[q.correctAnswerIndex]}\n`;
         content += `Explicação: ${q.mentorTip}\n`;
       }
     });
@@ -190,77 +180,42 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `resultado-${Date.now()}.txt`;
+    a.download = `simulafacil-resultado-${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const clearHistory = () => {
-    if (confirm("Deseja realmente apagar todo o seu histórico e rank?")) {
-      setHistory([]);
-      localStorage.removeItem('simulafacil_v1_history');
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0c10] text-slate-200">
-      <Navbar 
-        email={user?.email} 
-        onLogout={() => { setUser(null); setState('login'); }} 
-        onGoHome={() => user && setState('generator')}
-      />
-      
+      <Navbar email={user?.email} onLogout={() => { setUser(null); setState('login'); }} onGoHome={() => user && setState('generator')} />
       <main className="flex-grow flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
         <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/5 blur-[120px] rounded-full" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-600/5 blur-[120px] rounded-full" />
-
-        <div className="w-full max-w-5xl z-10 animate-in fade-in duration-700">
+        <div className="w-full max-w-5xl z-10">
           {state === 'login' && <LoginCard onLogin={handleLogin} loading={loading} error={error} />}
-          {state === 'generator' && (
-            loading ? <LoadingView message={loadingMsg} /> : <GeneratorCard onGenerate={handleGenerate} error={error} history={history} onViewHistory={() => setState('history')} />
-          )}
-          {state === 'quiz' && quiz && (
-            <QuizView 
-              question={quiz.questions[currentQuestionIndex]} 
-              total={quiz.questions.length}
-              current={currentQuestionIndex + 1}
-              onSelect={handleAnswerSelect}
-            />
-          )}
-          {state === 'result' && quiz && (
-            <ResultView quiz={quiz} userAnswers={userAnswers} onRestart={() => setState('generator')} onDownload={downloadReport} />
-          )}
-          {state === 'history' && (
-            <HistoryView history={history} onBack={() => setState('generator')} onClear={clearHistory} />
-          )}
+          {state === 'generator' && (loading ? <LoadingView message={loadingMsg} /> : <GeneratorCard onGenerate={handleGenerate} error={error} history={history} onViewHistory={() => setState('history')} />)}
+          {state === 'quiz' && quiz && <QuizView question={quiz.questions[currentQuestionIndex]} total={quiz.questions.length} current={currentQuestionIndex + 1} onSelect={handleAnswerSelect} />}
+          {state === 'result' && quiz && <ResultView quiz={quiz} userAnswers={userAnswers} onRestart={() => setState('generator')} onDownload={downloadReport} />}
+          {state === 'history' && <HistoryView history={history} onBack={() => setState('generator')} />}
         </div>
       </main>
     </div>
   );
 }
 
-// --- Specific Views ---
-
 const LoginCard: React.FC<{ onLogin: (e: string) => void; loading: boolean; error: string | null }> = ({ onLogin, loading, error }) => {
   const [email, setEmail] = useState('');
   return (
-    <div className="max-w-md mx-auto bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 md:p-12 rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-500">
+    <div className="max-w-md mx-auto bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 md:p-12 rounded-[3rem] shadow-2xl">
       <div className="text-center mb-10">
         <Logo size="lg" className="justify-center mb-4" />
-        <p className="text-slate-400 mt-2 text-sm max-w-[250px] mx-auto">Sua plataforma avançada de simulados acadêmicos</p>
+        <p className="text-slate-400 mt-2 text-sm max-w-[250px] mx-auto">Simulados de alta complexidade para estudos avançados.</p>
       </div>
       <form onSubmit={e => { e.preventDefault(); onLogin(email); }} className="space-y-6">
-        <div className="space-y-1">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">E-mail de Acesso</label>
-          <input 
-            type="email" value={email} onChange={e => setEmail(e.target.value)} required
-            className="w-full bg-slate-950/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-indigo-500 transition text-white placeholder:text-slate-700"
-            placeholder="digite seu e-mail..."
-          />
-        </div>
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full bg-slate-950/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-indigo-500 transition text-white" placeholder="Seu e-mail..." />
         {error && <div className="text-rose-400 text-xs font-bold bg-rose-400/10 p-4 rounded-xl border border-rose-400/20">{error}</div>}
-        <button disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all active:scale-95">
-          {loading ? 'Sincronizando...' : 'Acessar Plataforma'}
+        <button disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl transition-all">
+          {loading ? 'Validando...' : 'Entrar'}
         </button>
       </form>
     </div>
@@ -268,14 +223,14 @@ const LoginCard: React.FC<{ onLogin: (e: string) => void; loading: boolean; erro
 };
 
 const LoadingView: React.FC<{ message: string }> = ({ message }) => (
-  <div className="text-center py-20 space-y-8 animate-in zoom-in-95 duration-500">
+  <div className="text-center py-20 space-y-8">
     <div className="relative w-24 h-24 mx-auto">
       <div className="absolute inset-0 border-4 border-indigo-600/10 rounded-full" />
       <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin" />
     </div>
     <div className="space-y-2">
       <h3 className="text-2xl font-black text-white animate-pulse">{message}</h3>
-      <p className="text-slate-500">Aguarde, estamos lapidando questões de alto nível.</p>
+      <p className="text-slate-500">Aguarde, gerando simulação completa de 50 questões.</p>
     </div>
   </div>
 );
@@ -283,73 +238,52 @@ const LoadingView: React.FC<{ message: string }> = ({ message }) => (
 const GeneratorCard: React.FC<{ onGenerate: (t: string, d: Difficulty) => void; error: string | null; history: HistoryItem[]; onViewHistory: () => void }> = ({ onGenerate, error, history, onViewHistory }) => {
   const [text, setText] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('médio');
-
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 md:p-10 rounded-[3rem] shadow-2xl">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-8">
-          <div>
-            <h2 className="text-4xl font-black text-white tracking-tighter italic">Novo Desafio</h2>
-            <p className="text-slate-400 mt-2 text-lg">Qual o foco do seu estudo hoje?</p>
-          </div>
-          {history.length > 0 && (
-            <button onClick={onViewHistory} className="group flex items-center gap-3 px-7 py-3.5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl transition-all text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-indigo-600/20 active:scale-95">
-              <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              Ver Meu Rank
-            </button>
-          )}
+    <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 md:p-10 rounded-[3rem] shadow-2xl">
+      <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-8">
+        <div>
+          <h2 className="text-4xl font-black text-white tracking-tighter italic">Nova Simulação</h2>
+          <p className="text-slate-400 mt-2 text-lg">Defina o tema para as 50 questões.</p>
         </div>
-
-        <div className="mb-6">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 block">Complexidade das Questões</label>
-          <div className="grid grid-cols-3 gap-3">
-            {(['fácil', 'médio', 'difícil'] as Difficulty[]).map((level) => (
-              <button key={level} onClick={() => setDifficulty(level)} className={`py-4 rounded-2xl border font-black capitalize transition-all text-xs tracking-widest ${difficulty === level ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-slate-950/40 border-slate-700 text-slate-500 hover:border-slate-500'}`}>
-                {level}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <textarea 
-          value={text} onChange={e => setText(e.target.value)}
-          placeholder="Ex: 'História do Brasil Império' ou cole seu material de apoio aqui..."
-          className="w-full h-52 bg-slate-950/50 border border-slate-700 p-6 rounded-[2rem] outline-none focus:border-indigo-500 transition text-slate-300 font-medium leading-relaxed resize-none shadow-inner"
-        />
-        
-        {error && <div className="mt-4 text-rose-400 text-xs font-bold bg-rose-400/10 p-4 rounded-xl border border-rose-400/20">{error}</div>}
-        <button onClick={() => onGenerate(text, difficulty)} className="mt-8 w-full py-6 bg-white text-slate-950 font-black rounded-[2rem] hover:bg-indigo-50 shadow-2xl transition-all uppercase tracking-[0.2em] text-sm active:scale-95 border-b-4 border-slate-300">
-          Gerar Simulado de 15 Questões
-        </button>
+        {history.length > 0 && (
+          <button onClick={onViewHistory} className="px-7 py-3.5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl transition-all text-[10px] font-black uppercase text-white shadow-xl">Ver Ranking</button>
+        )}
       </div>
+      <div className="mb-6">
+        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 block">Complexidade</label>
+        <div className="grid grid-cols-3 gap-3">
+          {(['fácil', 'médio', 'difícil'] as Difficulty[]).map((level) => (
+            <button key={level} onClick={() => setDifficulty(level)} className={`py-4 rounded-2xl border font-black capitalize transition-all text-xs ${difficulty === level ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-slate-950/40 border-slate-700 text-slate-500'}`}>{level}</button>
+          ))}
+        </div>
+      </div>
+      <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Ex: 'Economia Política Global' ou 'Mecânica Quântica Básica'..." className="w-full h-52 bg-slate-950/50 border border-slate-700 p-6 rounded-[2rem] outline-none focus:border-indigo-500 transition text-slate-300 font-medium resize-none shadow-inner" />
+      {error && <div className="mt-4 text-rose-400 text-xs font-bold bg-rose-400/10 p-4 rounded-xl border border-rose-400/20">{error}</div>}
+      <button onClick={() => onGenerate(text, difficulty)} className="mt-8 w-full py-6 bg-white text-slate-950 font-black rounded-[2rem] hover:bg-indigo-50 transition-all uppercase tracking-widest text-sm shadow-2xl border-b-4 border-slate-300">
+        Gerar Simulado de 50 Questões
+      </button>
     </div>
   );
 };
 
 const QuizView: React.FC<{ question: Question; total: number; current: number; onSelect: (idx: number) => void }> = ({ question, total, current, onSelect }) => (
-  <div className="max-w-3xl mx-auto space-y-10 animate-in slide-in-from-right-10 duration-500">
+  <div className="max-w-3xl mx-auto space-y-10 animate-in slide-in-from-right-10">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-black">{current}</div>
-        <div>
-          <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Em Andamento</p>
-          <h3 className="text-xl font-black text-white italic">Questão {current} de {total}</h3>
-        </div>
+        <div><h3 className="text-xl font-black text-white italic">Questão {current} de {total}</h3></div>
       </div>
-      <div className="text-right">
-        <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Status do Exame</p>
-        <div className="w-32 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-          <div className="h-full bg-indigo-600 transition-all duration-500" style={{ width: `${(current/total)*100}%` }} />
-        </div>
+      <div className="w-32 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div className="h-full bg-indigo-600 transition-all duration-500" style={{ width: `${(current/total)*100}%` }} />
       </div>
     </div>
-    <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-10 rounded-[3rem] shadow-2xl relative">
-      <p className="text-xl font-bold text-white leading-snug mb-10">{question.question}</p>
+    <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-10 rounded-[3rem] shadow-2xl">
+      <p className="text-xl font-bold text-white mb-10 leading-snug">{question.question}</p>
       <div className="grid grid-cols-1 gap-4">
         {question.options.map((opt, i) => (
           <button key={i} onClick={() => onSelect(i)} className="group flex items-center gap-5 p-6 bg-slate-950/40 border border-slate-700 rounded-3xl text-left hover:border-indigo-500 hover:bg-indigo-500/5 transition-all">
-            <span className="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center font-black text-xs text-slate-500 group-hover:bg-indigo-600 group-hover:text-white transition-colors">{String.fromCharCode(65 + i)}</span>
-            <span className="text-slate-300 font-medium group-hover:text-white transition-colors">{opt}</span>
+            <span className="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center font-black text-xs text-slate-500 group-hover:bg-indigo-600 group-hover:text-white">{String.fromCharCode(65 + i)}</span>
+            <span className="text-slate-300 font-medium group-hover:text-white">{opt}</span>
           </button>
         ))}
       </div>
@@ -361,74 +295,83 @@ const ResultView: React.FC<{ quiz: QuizData; userAnswers: number[]; onRestart: (
   const score = userAnswers.reduce((acc, ans, idx) => acc + (ans === quiz.questions[idx].correctAnswerIndex ? 1 : 0), 0);
   const status = getGradeStatus(score, quiz.questions.length);
   const errors = quiz.questions.filter((q, i) => userAnswers[i] !== q.correctAnswerIndex);
+  
   const [animatedScore, setAnimatedScore] = useState(0);
-
   useEffect(() => { 
-    const t = setTimeout(() => setAnimatedScore(score), 200); 
+    const t = setTimeout(() => setAnimatedScore(score), 500); 
     return () => clearTimeout(t); 
   }, [score]);
 
-  const radius = 74;
+  const radius = 85;
   const circ = 2 * Math.PI * radius;
   const off = circ - (animatedScore / quiz.questions.length) * circ;
 
   return (
     <div className="space-y-10 py-10 animate-in fade-in duration-1000">
       <div className={`p-10 rounded-[4rem] border ${status.border} ${status.bg} backdrop-blur-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-12`}>
-        <div className="space-y-5 text-center md:text-left">
-          <span className={`text-[10px] font-black uppercase tracking-[0.5em] ${status.color}`}>Relatório Acadêmico</span>
-          <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter italic">
+        <div className="space-y-6 text-center md:text-left">
+          <span className={`text-[10px] font-black uppercase tracking-[0.4em] ${status.color}`}>Relatório Acadêmico Final</span>
+          <h2 className="text-5xl md:text-7xl font-black text-white italic tracking-tighter">
             {status.icon} {status.label}
           </h2>
-          <p className="text-slate-300 max-w-sm font-medium text-lg leading-relaxed">{status.msg}</p>
-          <div className="flex flex-wrap gap-3 justify-center md:justify-start pt-2">
-            <button onClick={onDownload} className="flex items-center gap-2 px-6 py-3.5 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 transition-all text-[10px] font-black uppercase tracking-widest text-white shadow-lg">
-              Download Relatório
+          <p className="text-slate-300 max-w-sm font-medium text-lg">{status.msg}</p>
+          <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+            <button onClick={onDownload} className="flex items-center gap-2 px-6 py-4 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 text-[10px] font-black uppercase tracking-widest text-white transition-all shadow-lg">
+              Download Relatório (.txt)
             </button>
-            <button onClick={onRestart} className="px-8 py-3.5 bg-white text-slate-950 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all shadow-xl">
+            <button onClick={onRestart} className="px-8 py-4 bg-white text-slate-950 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-indigo-50 transition-all shadow-xl">
               Novo Simulado
             </button>
           </div>
         </div>
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-52 h-52 rounded-full border-[14px] border-slate-800 flex items-center justify-center relative shadow-2xl bg-slate-950/20">
-            <svg className="absolute inset-0 w-full h-full -rotate-90 scale-105">
-              <circle cx="104" cy="104" r={radius} fill="transparent" stroke="currentColor" strokeWidth="14" className={`${status.color} transition-all duration-[2000ms] ease-out drop-shadow-[0_0_8px_currentColor]`} strokeDasharray={circ} strokeDashoffset={isNaN(off) ? circ : off} strokeLinecap="round" />
+
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-60 h-60 rounded-full flex items-center justify-center relative bg-slate-950/40 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] border border-slate-800">
+            <svg className="absolute inset-0 w-full h-full -rotate-90">
+              <circle cx="120" cy="120" r={radius} fill="transparent" stroke="currentColor" strokeWidth="16" className="text-slate-800" />
+              <circle cx="120" cy="120" r={radius} fill="transparent" stroke="currentColor" strokeWidth="16" 
+                className={`${status.color} transition-all duration-[2000ms] ease-out drop-shadow-[0_0_12px_currentColor]`} 
+                strokeDasharray={circ} strokeDashoffset={isNaN(off) ? circ : off} strokeLinecap="round" />
             </svg>
-            <div className="text-center animate-in zoom-in duration-1000 delay-500">
+            <div className="text-center z-10 animate-in zoom-in duration-700 delay-500">
               <p className="text-7xl font-black text-white leading-none">{score}</p>
-              <p className="text-[10px] font-black text-slate-500 uppercase mt-2">de {quiz.questions.length}</p>
+              <p className="text-xs font-black text-slate-500 uppercase mt-2 tracking-widest">de {quiz.questions.length}</p>
             </div>
           </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-8 bg-slate-950/80 px-6 py-2.5 rounded-full border border-slate-800 shadow-xl">
-            {Math.round((score/quiz.questions.length)*100)}% de Aproveitamento
-          </p>
+          <div className="px-6 py-2.5 bg-slate-950/80 rounded-full border border-slate-800 shadow-xl">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              Aproveitamento: {Math.round((score/quiz.questions.length)*100)}%
+            </p>
+          </div>
         </div>
       </div>
 
       <div className="space-y-8">
-        <h4 className="text-2xl font-black text-white uppercase tracking-tighter italic flex items-center gap-3 ml-2">
-          <span className="w-2.5 h-9 bg-indigo-600 rounded-full shadow-[0_0_15px_rgba(79,70,229,0.5)]" />
-          Revisão Detalhada ({errors.length})
-        </h4>
+        <div className="flex items-center gap-4 ml-4">
+          <div className="w-3 h-10 bg-indigo-600 rounded-full shadow-[0_0_15px_rgba(79,70,229,0.5)]" />
+          <h4 className="text-2xl font-black text-white italic">Análise de Pontos de Melhoria ({errors.length})</h4>
+        </div>
         <div className="grid grid-cols-1 gap-6">
           {errors.map((q, idx) => {
             const uIdx = quiz.questions.indexOf(q);
             return (
-              <div key={idx} className="bg-slate-900/40 border border-slate-800 p-8 md:p-10 rounded-[3rem] hover:border-slate-700 transition-all group">
-                <p className="text-xl font-bold text-white mb-8 leading-relaxed">#{(uIdx + 1).toString().padStart(2, '0')} — {q.question}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <div className="p-5 rounded-3xl bg-rose-500/5 border border-rose-500/10"><p className="text-[10px] font-black text-rose-400 uppercase mb-2">Sua Marcação</p><p className="text-sm font-medium text-slate-400">{q.options[userAnswers[uIdx]] || 'Vazio'}</p></div>
-                  <div className="p-5 rounded-3xl bg-emerald-500/5 border border-emerald-500/10"><p className="text-[10px] font-black text-emerald-400 uppercase mb-2">Opção Correta</p><p className="text-sm font-medium text-emerald-100">{q.options[q.correctAnswerIndex]}</p></div>
+              <div key={idx} className="bg-slate-900/40 border border-slate-800 p-8 rounded-[3rem] hover:border-slate-700 transition-all group">
+                <p className="text-xl font-bold text-white mb-6 leading-relaxed">#{(uIdx + 1).toString().padStart(2, '0')} — {q.question}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="p-5 rounded-3xl bg-rose-500/5 border border-rose-500/10">
+                    <p className="text-[10px] font-black text-rose-400 uppercase mb-1">Sua Escolha</p>
+                    <p className="text-sm font-medium text-slate-400">{q.options[userAnswers[uIdx]] || 'Sem Resposta'}</p>
+                  </div>
+                  <div className="p-5 rounded-3xl bg-emerald-500/5 border border-emerald-500/10">
+                    <p className="text-[10px] font-black text-emerald-400 uppercase mb-1">Gabarito Correto</p>
+                    <p className="text-sm font-medium text-emerald-100">{q.options[q.correctAnswerIndex]}</p>
+                  </div>
                 </div>
-                <div className="bg-indigo-600/10 border border-indigo-600/20 p-8 rounded-[2.5rem] flex gap-5 group-hover:bg-indigo-600/15 transition-all">
-                  <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center flex-shrink-0 text-white shadow-xl shadow-indigo-600/30">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <div className="p-6 rounded-[2rem] bg-indigo-600/10 border border-indigo-600/20 flex gap-4">
+                  <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-indigo-600/20">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1.5">Nota do Mentor Especialista</p>
-                    <p className="text-sm font-medium text-indigo-50/80 italic leading-relaxed">"{q.mentorTip}"</p>
-                  </div>
+                  <p className="text-sm font-medium text-indigo-100/80 italic leading-relaxed">"{q.mentorTip}"</p>
                 </div>
               </div>
             );
@@ -439,80 +382,44 @@ const ResultView: React.FC<{ quiz: QuizData; userAnswers: number[]; onRestart: (
   );
 };
 
-const HistoryView: React.FC<{ history: HistoryItem[]; onBack: () => void; onClear: () => void }> = ({ history, onBack, onClear }) => {
-  const [sortMode, setSortMode] = useState<'recent' | 'best'>('best');
-  
-  const sortedHistory = [...history].sort((a, b) => {
-    if (sortMode === 'best') return (b.correct / b.total) - (a.correct / a.total);
-    return parseInt(b.id) - parseInt(a.id);
-  });
-
-  return (
-    <div className="max-w-4xl mx-auto space-y-10 py-10 animate-in slide-in-from-bottom-10 duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-6 px-4">
-        <div>
-          <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">Meu Rank <span className="text-indigo-500">Global</span></h2>
-          <p className="text-slate-500 text-sm mt-1">Dados de performance salvos no seu dispositivo.</p>
-        </div>
-        <div className="flex gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shadow-xl">
-          <button onClick={() => setSortMode('best')} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${sortMode === 'best' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-500 hover:text-white'}`}>Melhores Notas</button>
-          <button onClick={() => setSortMode('recent')} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${sortMode === 'recent' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-500 hover:text-white'}`}>Cronológico</button>
-        </div>
+const HistoryView: React.FC<{ history: HistoryItem[]; onBack: () => void }> = ({ history, onBack }) => (
+  <div className="max-w-4xl mx-auto space-y-10 py-10 animate-in slide-in-from-bottom-10">
+    <div className="flex justify-between items-center px-4">
+      <div>
+        <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">Histórico de <span className="text-indigo-500">Rank</span></h2>
+        <p className="text-slate-500 text-sm">Acompanhe sua evolução acadêmica.</p>
       </div>
-
-      <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[3.5rem] overflow-hidden shadow-2xl relative">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-950/80 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-800">
-                <th className="px-10 py-8">Classificação / Tema</th>
-                <th className="px-10 py-8 text-center">Nível</th>
-                <th className="px-10 py-8 text-right">Performance</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/50">
-              {sortedHistory.map((item, idx) => {
-                const perc = Math.round((item.correct / item.total) * 100);
-                return (
-                  <tr key={item.id} className="hover:bg-indigo-600/5 transition-all group">
-                    <td className="px-10 py-8">
-                      <div className="flex items-center gap-7">
-                        <span className={`w-11 h-11 rounded-[1rem] flex items-center justify-center font-black text-sm shadow-xl transition-transform group-hover:scale-110 ${idx === 0 ? 'bg-amber-400 text-amber-950 scale-110 rotate-3' : idx === 1 ? 'bg-slate-300 text-slate-900' : idx === 2 ? 'bg-orange-400 text-orange-950' : 'bg-slate-800/80 text-slate-500'}`}>
-                          {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : (idx + 1)}
-                        </span>
-                        <div>
-                          <p className="font-bold text-slate-200 text-lg group-hover:text-white transition-colors">{item.subject}</p>
-                          <p className="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-wider">{item.date.split(',')[0]}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-10 py-8 text-center">
-                      <span className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${item.difficulty === 'difícil' ? 'bg-rose-500/5 border-rose-500/20 text-rose-400' : item.difficulty === 'médio' ? 'bg-amber-500/5 border-amber-500/20 text-amber-400' : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'}`}>
-                        {item.difficulty}
-                      </span>
-                    </td>
-                    <td className="px-10 py-8 text-right">
-                      <div className="inline-block px-5 py-2.5 bg-slate-950/60 rounded-2xl border border-slate-800 shadow-inner group-hover:border-indigo-500/30 transition-all">
-                        <p className={`text-base font-black ${perc >= 70 ? 'text-emerald-400' : perc >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>
-                          {item.correct}/{item.total} <span className="text-[10px] opacity-60 ml-1">({perc}%)</span>
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {history.length === 0 && <div className="p-32 text-center text-slate-600 font-medium italic">Seu rank está aguardando seu primeiro simulado!</div>}
-      </div>
-
-      <div className="flex justify-between items-center px-4">
-        <button onClick={onBack} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all bg-white/5 px-8 py-4 rounded-2xl border border-white/5 hover:bg-white/10">Voltar ao Gerador</button>
-        {history.length > 0 && (
-          <button onClick={onClear} className="text-[10px] font-black uppercase tracking-widest text-rose-500/40 hover:text-rose-400 transition-all">Limpar Histórico Local</button>
-        )}
-      </div>
+      <button onClick={onBack} className="text-[10px] font-black uppercase text-slate-400 bg-white/5 px-8 py-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-all">Voltar ao Gerador</button>
     </div>
-  );
-};
+    <div className="bg-slate-900/40 border border-slate-800 rounded-[3.5rem] overflow-hidden shadow-2xl">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="bg-slate-950/80 text-[10px] font-black uppercase text-slate-500 border-b border-slate-800">
+            <tr>
+              <th className="px-10 py-8">Simulado / Data</th>
+              <th className="px-10 py-8">Complexidade</th>
+              <th className="px-10 py-8 text-right">Desempenho</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800/50">
+            {history.map((item) => (
+              <tr key={item.id} className="hover:bg-indigo-600/5 transition-all group">
+                <td className="px-10 py-8">
+                  <p className="font-bold text-slate-200 text-lg group-hover:text-white transition-colors">{item.subject}</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{item.date}</p>
+                </td>
+                <td className="px-10 py-8">
+                  <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase border ${item.difficulty === 'difícil' ? 'bg-rose-500/5 border-rose-500/20 text-rose-400' : 'bg-indigo-500/5 border-indigo-500/20 text-indigo-400'}`}>{item.difficulty}</span>
+                </td>
+                <td className="px-10 py-8 text-right font-black text-xl text-indigo-400">
+                  {item.correct} <span className="text-xs text-slate-600">/ {item.total}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {history.length === 0 && <div className="p-32 text-center text-slate-600 font-medium italic">Nenhum simulado registrado no seu dispositivo.</div>}
+    </div>
+  </div>
+);
