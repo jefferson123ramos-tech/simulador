@@ -26,9 +26,6 @@ export default function App() {
   const [currentDifficulty, setCurrentDifficulty] = useState<Difficulty>('médio');
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
-  // Verificação de configuração baseada no mapeamento do Vite
-  const isConfigured = !!process.env.API_KEY && process.env.API_KEY !== "" && process.env.API_KEY !== "undefined";
-
   useEffect(() => {
     const saved = localStorage.getItem('simuladoai_v1_history');
     if (saved) setHistory(JSON.parse(saved));
@@ -83,12 +80,9 @@ export default function App() {
       setCurrentQuestionIndex(0);
       setState('quiz');
     } catch (e: any) { 
-      if (e.message === "API_KEY_MISSING") {
-        setError("Erro de Configuração: A variável VITE_GEMINI_API_KEY não foi encontrada na Vercel.");
-      } else {
-        // Exibe o erro real conforme solicitado
-        setError("Erro na Geração: " + e.message);
-      }
+      // Alerta Técnico Obrigatório Conforme Solicitação
+      alert("Erro na Geração: " + e.message);
+      setError(e.message);
     } finally { setLoading(false); }
   };
 
@@ -134,30 +128,6 @@ export default function App() {
     a.click();
     URL.revokeObjectURL(url);
   };
-
-  // Tela de erro de configuração específica para Vercel
-  if (!isConfigured && state !== 'login') {
-    return (
-      <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-slate-900/40 backdrop-blur-xl border border-rose-500/20 p-12 rounded-[3rem] shadow-2xl text-center">
-          <Logo size="lg" className="justify-center mb-10" />
-          <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-rose-500/20">
-            <svg className="w-10 h-10 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-4 italic">Ação Necessária</h2>
-          <p className="text-slate-400 text-sm mb-8 leading-relaxed">
-            Erro de Configuração: A variável <code className="bg-slate-950 px-2 py-1 rounded text-indigo-400 font-mono">VITE_GEMINI_API_KEY</code> não foi encontrada na Vercel. Verifique as configurações de Environment Variables.
-          </p>
-          <div className="space-y-4">
-            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="block w-full py-4 bg-white text-slate-950 font-black rounded-2xl hover:bg-indigo-50 transition-all uppercase text-[10px] tracking-widest shadow-xl">1. Obter Chave no AI Studio</a>
-            <button onClick={() => window.location.reload()} className="block w-full py-4 bg-slate-800 text-white font-black rounded-2xl hover:bg-slate-700 transition-all uppercase text-[10px] tracking-widest">2. Já adicionei, recarregar app</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0c10] text-slate-200">

@@ -4,29 +4,39 @@ import { QuizData, Difficulty } from "./types";
 
 /**
  * Limpa a resposta da IA de qualquer formatação Markdown ou texto extra.
- * Conforme as diretrizes, a propriedade .text deve retornar o conteúdo limpo quando configurado com responseMimeType: "application/json".
  */
 const sanitizeAiResponse = (text: string): string => {
   if (!text) return "";
-  return text.trim();
+  // Remove blocos de código markdown e espaços extras
+  let cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
+  
+  // Garante que pegamos apenas o que está entre as chaves do objeto principal
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  
+  if (firstBrace !== -1 && lastBrace !== -1) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+  
+  return cleaned;
 };
 
 export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
-  // A chave da API deve ser obtida exclusivamente de process.env.API_KEY conforme as diretrizes do SDK
-  const apiKey = process.env.API_KEY;
+  // Lógica Obrigatória: Acesso via import.meta.env para Vite/Vercel
+  const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
 
-  if (!apiKey || apiKey === "" || apiKey === "undefined") {
-    throw new Error("API_KEY_MISSING");
+  if (!apiKey) {
+    console.error("ERRO FATAL: VITE_GEMINI_API_KEY está vazia nas configurações de ambiente.");
+    throw new Error("Erro de Configuração: A variável VITE_GEMINI_API_KEY não foi encontrada na Vercel. Verifique as configurações de Environment Variables.");
   }
 
   try {
-    // Inicializa o cliente com a API Key em um objeto nomeado conforme as diretrizes
+    // Inicialização segura dentro da função
     const ai = new GoogleGenAI({ apiKey });
 
-    // Fix: Alterado o modelo para 'gemini-3-pro-preview' para lidar com a geração complexa de 50 questões técnicas (tarefa STEM/Reasoning).
-    // Fix: Removidas as safetySettings (linhas 54-58) que estavam causando erros de atribuição de tipo entre literais de string e os Enums HarmCategory/HarmBlockThreshold.
+    // Uso do modelo estável gemini-flash-latest
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-flash-latest',
       contents: [{
         parts: [{
           text: `Você é um professor acadêmico sênior. Crie um simulado técnico sobre: "${text}".
@@ -38,7 +48,7 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
           3. O campo 'mentorTip' deve ser uma explicação curta (máx 15 palavras).
           4. Idioma: Português do Brasil.
           
-          IMPORTANTE: Responda APENAS com o JSON cru.`
+          IMPORTANTE: Responda APENAS com o JSON cru. Não use markdown, não use crases, não coloque introdução.`
         }]
       }],
       config: {
@@ -69,24 +79,23 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
       }
     });
 
-    // Fix: Utilizada a propriedade .text (getter) diretamente conforme as diretrizes do SDK, evitando chamadas como métodos ou encadeamentos desnecessários.
+    // Propriedade .text direta conforme diretrizes do SDK
     const rawText = response.text || "";
     const cleanedJson = sanitizeAiResponse(rawText);
     
     try {
       const parsedData = JSON.parse(cleanedJson) as QuizData;
       if (!parsedData.questions || parsedData.questions.length === 0) {
-        throw new Error("A IA retornou um conjunto de dados vazio.");
+        throw new Error("A IA retornou um conjunto de dados vazio ou incompleto.");
       }
       return parsedData;
     } catch (parseError: any) {
-      console.error("Falha no Parse. Texto recebido:", rawText);
-      throw new Error(`Erro na estrutura dos dados (JSON): ${parseError.message}`);
+      console.error("Falha ao processar JSON. Raw:", rawText);
+      throw new Error(`Falha na formatação do simulado (JSON Parse Error): ${parseError.message}`);
     }
 
   } catch (e: any) {
-    if (e.message === "API_KEY_MISSING") throw e;
-    console.error("Erro no processamento da IA:", e);
-    throw new Error(e.message || "Erro desconhecido na comunicação com a IA.");
+    console.error("Erro na comunicação com Gemini API:", e);
+    throw e; // Propaga para o tratamento de erro no componente App
   }
 };
