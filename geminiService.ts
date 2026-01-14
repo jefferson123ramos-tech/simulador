@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { QuizData, Difficulty } from "./types";
 
 /**
@@ -22,21 +22,22 @@ const sanitizeAiResponse = (text: string): string => {
 };
 
 export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
-  // Lógica Obrigatória: Acesso via import.meta.env para Vite/Vercel
-  const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
+  // Fix: Use process.env.API_KEY exclusively as per SDK guidelines.
+  const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
-    console.error("ERRO FATAL: VITE_GEMINI_API_KEY está vazia nas configurações de ambiente.");
-    throw new Error("Erro de Configuração: A variável VITE_GEMINI_API_KEY não foi encontrada na Vercel. Verifique as configurações de Environment Variables.");
+    throw new Error("Chave de API não configurada.");
   }
 
   try {
-    // Inicialização segura dentro da função
+    // Fix: Create new GoogleGenAI instance inside the function to ensure up-to-date config is used.
     const ai = new GoogleGenAI({ apiKey });
 
-    // Uso do modelo estável gemini-flash-latest
+    // Fix: Use 'gemini-3-flash-preview' for optimal performance in text tasks.
+    // Fix: Move safetySettings to the top level of the request parameters (not inside config).
+    // Fix: Use HarmCategory and HarmBlockThreshold enums to resolve TypeScript type assignment errors.
     const response = await ai.models.generateContent({
-      model: 'gemini-flash-latest',
+      model: 'gemini-3-flash-preview',
       contents: [{
         parts: [{
           text: `Você é um professor acadêmico sênior. Crie um simulado técnico sobre: "${text}".
@@ -48,9 +49,15 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
           3. O campo 'mentorTip' deve ser uma explicação curta (máx 15 palavras).
           4. Idioma: Português do Brasil.
           
-          IMPORTANTE: Responda APENAS com o JSON cru. Não use markdown, não use crases, não coloque introdução.`
+          IMPORTANTE: Responda APENAS com o JSON cru. Não use markdown, não use crases, não coloque introdução nem conclusão.`
         }]
       }],
+      safetySettings: [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
+      ],
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -79,23 +86,23 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
       }
     });
 
-    // Propriedade .text direta conforme diretrizes do SDK
+    // Fix: Access response.text property directly as per modern SDK guidelines.
     const rawText = response.text || "";
     const cleanedJson = sanitizeAiResponse(rawText);
     
     try {
       const parsedData = JSON.parse(cleanedJson) as QuizData;
       if (!parsedData.questions || parsedData.questions.length === 0) {
-        throw new Error("A IA retornou um conjunto de dados vazio ou incompleto.");
+        throw new Error("A IA retornou um conjunto de dados vazio.");
       }
       return parsedData;
     } catch (parseError: any) {
       console.error("Falha ao processar JSON. Raw:", rawText);
-      throw new Error(`Falha na formatação do simulado (JSON Parse Error): ${parseError.message}`);
+      throw new Error(`Falha na estrutura do simulado (JSON Parse): ${parseError.message}`);
     }
 
   } catch (e: any) {
     console.error("Erro na comunicação com Gemini API:", e);
-    throw e; // Propaga para o tratamento de erro no componente App
+    throw new Error(e.message || "Erro desconhecido na comunicação com a IA.");
   }
 };
