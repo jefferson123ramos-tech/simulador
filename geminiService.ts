@@ -2,36 +2,41 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizData, Difficulty } from "./types";
 
+/**
+ * Limpa a resposta da IA removendo blocos de código Markdown
+ * e espaços em branco desnecessários para garantir um JSON válido.
+ */
 const cleanJsonResponse = (text: string): string => {
+  if (!text) return "";
   let cleaned = text.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```(?:json)?\n?/, "");
-    cleaned = cleaned.replace(/\n?```$/, "");
-  }
+  // Remove blocos de código markdown (```json ... ``` ou ``` ... ```)
+  cleaned = cleaned.replace(/```(?:json)?/g, "").replace(/```/g, "");
   return cleaned.trim();
 };
 
 export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
-  /**
-   * DIRETRIZES OBRIGATÓRIAS DO SDK:
-   * 1. A chave DEVE ser obtida exclusivamente de process.env.API_KEY.
-   * 2. A inicialização DEVE usar o parâmetro nomeado { apiKey }.
-   * 3. O modelo DEVE ser gemini-3-flash-preview para tarefas de texto.
-   */
   try {
+    // Inicialização obrigatória via process.env.API_KEY
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Gere um simulado acadêmico PROFISSIONAL e DETALHADO com EXATAMENTE 50 questões de múltipla escolha (4 opções cada) sobre: "${text}".
-
-      ESTRUTURA OBRIGATÓRIA:
+      contents: `Gere um simulado acadêmico PROFISSIONAL com EXATAMENTE 50 questões de múltipla escolha sobre: "${text}".
+      
+      REQUISITOS:
       - Dificuldade: ${difficulty.toUpperCase()}.
-      - Campo mentorTip: Explicação técnica da resposta correta (máximo 12 palavras).
+      - Campo mentorTip: Explicação técnica (máx 12 palavras).
       - Idioma: Português do Brasil.
       - Retorne APENAS o JSON puro.`,
       config: {
         responseMimeType: "application/json",
+        // Ajuste de segurança para permitir temas acadêmicos sensíveis (Direito, Saúde, etc.)
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' }
+        ],
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -58,20 +63,23 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
       }
     });
 
-    const jsonStr = cleanJsonResponse(response.text || "");
-    const parsed = JSON.parse(jsonStr) as QuizData;
+    const rawText = response.text || "";
+    const jsonStr = cleanJsonResponse(rawText);
     
-    if (!parsed.questions || parsed.questions.length < 1) {
-      throw new Error("A IA retornou um conjunto incompleto de questões.");
+    try {
+      const parsed = JSON.parse(jsonStr) as QuizData;
+      if (!parsed.questions || parsed.questions.length === 0) {
+        throw new Error("A IA retornou zero questões.");
+      }
+      return parsed;
+    } catch (parseError) {
+      console.error("Erro ao parsear JSON:", jsonStr);
+      throw new Error("A IA gerou um formato de resposta inválido. Tente simplificar o tema.");
     }
 
-    return parsed;
   } catch (e: any) {
-    console.error("Erro na geração Gemini:", e);
-    // Erro amigável para o usuário final
-    const errorMessage = e.message?.includes('process') 
-      ? "Erro de configuração de ambiente. A chave API não foi detectada." 
-      : "Falha ao gerar o simulado. Verifique sua conexão ou tente um tema diferente.";
-    throw new Error(errorMessage);
+    console.error("Erro Crítico na geração Gemini:", e);
+    // Retorna o erro técnico real para facilitar o diagnóstico
+    throw new Error(`Erro técnico: ${e.message || "Falha na conexão com a IA"}`);
   }
 };
