@@ -2,9 +2,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizData, Difficulty } from "./types";
 
-/**
- * Sanitização de JSON para evitar quebras por formatação de markdown da IA.
- */
 const cleanJsonResponse = (text: string): string => {
   if (!text) return "";
   let cleaned = text.trim();
@@ -13,19 +10,16 @@ const cleanJsonResponse = (text: string): string => {
 };
 
 export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
-  // 1. Captura da chave no momento da chamada (Segurança Máxima)
+  // Acesso seguro à chave definida pelo Vite ou pelo ambiente
   const apiKey = process.env.API_KEY;
 
-  if (!apiKey || apiKey === "undefined") {
-    console.error("ERRO CRÍTICO: Chave API ausente em process.env.API_KEY");
-    throw new Error("Configuração da API ausente. Por favor, verifique as variáveis de ambiente do projeto.");
+  if (!apiKey || apiKey === "" || apiKey === "undefined") {
+    throw new Error("API_KEY_MISSING");
   }
 
   try {
-    // 2. Inicialização local da instância do SDK
     const ai = new GoogleGenAI({ apiKey });
 
-    // 3. Chamada ao modelo utilizando a estrutura correta do SDK
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: [{
@@ -75,19 +69,17 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
     
     try {
       const parsedData = JSON.parse(sanitizedJson) as QuizData;
-      
       if (!parsedData.questions || parsedData.questions.length === 0) {
-        throw new Error("O servidor de IA não retornou questões válidas.");
+        throw new Error("EMPTY_RESPONSE");
       }
-      
       return parsedData;
     } catch (parseError) {
-      console.error("JSON Bruto recebido:", rawOutput);
-      throw new Error("Erro de processamento nos dados da IA. Tente um tema mais específico.");
+      throw new Error("INVALID_JSON");
     }
 
   } catch (e: any) {
+    if (e.message === "API_KEY_MISSING") throw e;
     console.error("Erro no SDK Gemini:", e);
-    throw new Error(`Falha na IA: ${e.message || "Conexão interrompida"}`);
+    throw new Error(`FALHA_IA: ${e.message || "Erro de conexão"}`);
   }
 };

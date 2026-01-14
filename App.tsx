@@ -26,6 +26,9 @@ export default function App() {
   const [currentDifficulty, setCurrentDifficulty] = useState<Difficulty>('médio');
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
+  // Verifica se a API Key está configurada logo no início
+  const isConfigured = !!process.env.API_KEY && process.env.API_KEY !== "";
+
   useEffect(() => {
     const saved = localStorage.getItem('simuladoai_v1_history');
     if (saved) setHistory(JSON.parse(saved));
@@ -58,8 +61,7 @@ export default function App() {
       setUser(data);
       setState('generator');
     } catch (e: any) {
-      console.error("Login process error:", e);
-      setError("Erro técnico ao validar acesso. Tente novamente.");
+      setError("Erro ao validar acesso. Verifique sua conexão.");
     } finally {
       setLoading(false);
     }
@@ -68,12 +70,6 @@ export default function App() {
   const handleGenerate = async (text: string, difficulty: Difficulty) => {
     if (!text.trim()) { setError("O tema ou conteúdo base é obrigatório."); return; }
     
-    // Verificação preventiva da chave antes de iniciar o processo custoso
-    if (!process.env.API_KEY) {
-      setError("Erro de configuração de sistema: Chave API não detectada.");
-      return;
-    }
-
     setLoading(true);
     setError(null);
     setCurrentSubject(text.length > 35 ? text.substring(0, 32) + "..." : text);
@@ -87,7 +83,11 @@ export default function App() {
       setCurrentQuestionIndex(0);
       setState('quiz');
     } catch (e: any) { 
-      setError(e.message || "A IA falhou em gerar o simulado. Tente simplificar o tema."); 
+      if (e.message === "API_KEY_MISSING") {
+        setError("Configuração Necessária: A variável de ambiente API_KEY não foi encontrada.");
+      } else {
+        setError("A IA falhou em gerar o simulado. Tente um tema mais curto."); 
+      }
     } finally { setLoading(false); }
   };
 
@@ -134,6 +134,27 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  // Se a chave não estiver configurada, mostra uma tela de aviso profissional
+  if (!isConfigured && state !== 'login') {
+    return (
+      <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-slate-900/40 backdrop-blur-xl border border-rose-500/20 p-12 rounded-[3rem] shadow-2xl text-center">
+          <Logo size="lg" className="justify-center mb-10" />
+          <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-rose-500/20">
+            <svg className="w-10 h-10 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-4">Configuração Necessária</h2>
+          <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+            Para usar o <strong>SimuladoAI</strong> fora deste ambiente, você deve definir a variável de ambiente <code className="bg-slate-950 px-2 py-1 rounded text-indigo-400">API_KEY</code> no seu provedor de hospedagem ou arquivo <code className="bg-slate-950 px-2 py-1 rounded text-indigo-400">.env</code>.
+          </p>
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="block w-full py-4 bg-white text-slate-950 font-black rounded-2xl hover:bg-indigo-50 transition-all uppercase text-xs tracking-widest shadow-xl">Obter Chave API</a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0c10] text-slate-200">
       <nav className="p-4 border-b border-slate-800 bg-slate-950/50 backdrop-blur-md sticky top-0 z-50">
@@ -142,7 +163,7 @@ export default function App() {
           {user && (
             <div className="flex items-center gap-4">
               <span className="text-[10px] text-slate-500 font-bold uppercase hidden md:block">{user.email}</span>
-              <button onClick={() => { setUser(null); setState('login'); }} className="text-xs font-bold text-slate-500 hover:text-rose-400 transition-colors uppercase tracking-widest">Desconectar</button>
+              <button onClick={() => { setUser(null); setState('login'); }} className="text-xs font-bold text-slate-500 hover:text-rose-400 transition-colors uppercase tracking-widest">Sair</button>
             </div>
           )}
         </div>
