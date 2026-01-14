@@ -1,0 +1,5 @@
+{
+  "name": "SimuladoAI",
+  "description": "Uma plataforma inteligente para geração de simulados personalizados a partir de resumos e tópicos de estudo, utilizando a IA do Google Gemini.",
+  "requestFramePermissions": []
+}
