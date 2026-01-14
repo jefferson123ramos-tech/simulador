@@ -12,19 +12,15 @@ const cleanJsonResponse = (text: string): string => {
 };
 
 export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
-  // 1. Acesso correto via Vite Environment Variables
-  // @ts-ignore
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
-  // 2. Trava de segurança para produção
-  if (!apiKey) {
-    throw new Error("ERRO CRÍTICO: Chave API não encontrada. Verifique se VITE_GEMINI_API_KEY está configurada no seu arquivo .env ou na plataforma de deploy.");
-  }
-
-  // 3. Inicialização segura no momento da chamada
-  const ai = new GoogleGenAI({ apiKey });
-  
+  /**
+   * DIRETRIZES OBRIGATÓRIAS DO SDK:
+   * 1. A chave DEVE ser obtida exclusivamente de process.env.API_KEY.
+   * 2. A inicialização DEVE usar o parâmetro nomeado { apiKey }.
+   * 3. O modelo DEVE ser gemini-3-flash-preview para tarefas de texto.
+   */
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Gere um simulado acadêmico PROFISSIONAL e DETALHADO com EXATAMENTE 50 questões de múltipla escolha (4 opções cada) sobre: "${text}".
@@ -66,12 +62,16 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
     const parsed = JSON.parse(jsonStr) as QuizData;
     
     if (!parsed.questions || parsed.questions.length < 1) {
-      throw new Error("A IA retornou um conjunto vazio de questões.");
+      throw new Error("A IA retornou um conjunto incompleto de questões.");
     }
 
     return parsed;
   } catch (e: any) {
     console.error("Erro na geração Gemini:", e);
-    throw new Error("Falha ao processar simulado de 50 questões. Verifique sua cota da API ou conexão.");
+    // Erro amigável para o usuário final
+    const errorMessage = e.message?.includes('process') 
+      ? "Erro de configuração de ambiente. A chave API não foi detectada." 
+      : "Falha ao gerar o simulado. Verifique sua conexão ou tente um tema diferente.";
+    throw new Error(errorMessage);
   }
 };
