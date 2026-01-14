@@ -3,34 +3,45 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { QuizData, Difficulty } from "./types";
 
 /**
- * Limpa a resposta da IA removendo blocos de código Markdown
- * e espaços em branco desnecessários para garantir um JSON válido.
+ * Sanitização robusta para garantir que o retorno seja um JSON válido,
+ * removendo marcadores de Markdown e espaços residuais.
  */
 const cleanJsonResponse = (text: string): string => {
   if (!text) return "";
   let cleaned = text.trim();
-  // Remove blocos de código markdown (```json ... ``` ou ``` ... ```)
+  // Remove blocos de código markdown como ```json ... ``` ou ``` ... ```
   cleaned = cleaned.replace(/```(?:json)?/g, "").replace(/```/g, "");
   return cleaned.trim();
 };
 
 export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
+  // DIAGNÓSTICO: Verifica a presença da chave no momento da execução
+  console.log("SimuladoAI: Iniciando processo de geração...");
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey || apiKey === "undefined") {
+    console.error("ERRO DE CONFIGURAÇÃO: A variável process.env.API_KEY não foi encontrada.");
+    throw new Error("Chave API não configurada no ambiente. Verifique as configurações do projeto.");
+  }
+
+  console.log("SimuladoAI: Chave detectada (Prefixo: " + apiKey.substring(0, 4) + "...)");
+
   try {
-    // Inicialização obrigatória via process.env.API_KEY
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Inicialização da IA dentro da função para garantir acesso ao contexto atualizado
+    const ai = new GoogleGenAI({ apiKey });
     
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Gere um simulado acadêmico PROFISSIONAL com EXATAMENTE 50 questões de múltipla escolha sobre: "${text}".
-      
-      REQUISITOS:
-      - Dificuldade: ${difficulty.toUpperCase()}.
-      - Campo mentorTip: Explicação técnica (máx 12 palavras).
-      - Idioma: Português do Brasil.
-      - Retorne APENAS o JSON puro.`,
+      contents: `Gere um simulado acadêmico PROFISSIONAL com EXATAMENTE 50 questões de múltipla escolha (4 opções cada) sobre o tema: "${text}".
+
+      REQUISITOS TÉCNICOS:
+      - Nível de Dificuldade: ${difficulty.toUpperCase()}.
+      - Campo mentorTip: Breve explicação pedagógica da resposta correta (máx 15 palavras).
+      - Idioma: Português do Brasil (PT-BR).
+      - Formato: Retorne APENAS o JSON puro seguindo o esquema fornecido.`,
       config: {
         responseMimeType: "application/json",
-        // Ajuste de segurança para permitir temas acadêmicos sensíveis (Direito, Saúde, etc.)
+        // Proteção contra bloqueios em temas técnicos (Saúde, Direito, Biologia)
         safetySettings: [
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
           { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
@@ -63,23 +74,25 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
       }
     });
 
-    const rawText = response.text || "";
-    const jsonStr = cleanJsonResponse(rawText);
+    const rawOutput = response.text || "";
+    const sanitizedJson = cleanJsonResponse(rawOutput);
     
     try {
-      const parsed = JSON.parse(jsonStr) as QuizData;
-      if (!parsed.questions || parsed.questions.length === 0) {
-        throw new Error("A IA retornou zero questões.");
+      const parsedData = JSON.parse(sanitizedJson) as QuizData;
+      
+      if (!parsedData.questions || parsedData.questions.length === 0) {
+        throw new Error("A IA retornou um objeto vazio ou sem questões.");
       }
-      return parsed;
+      
+      return parsedData;
     } catch (parseError) {
-      console.error("Erro ao parsear JSON:", jsonStr);
-      throw new Error("A IA gerou um formato de resposta inválido. Tente simplificar o tema.");
+      console.error("Falha no Parse do JSON. Conteúdo bruto:", rawOutput);
+      throw new Error("A IA gerou um formato de resposta corrompido. Tente novamente ou mude o tema.");
     }
 
   } catch (e: any) {
-    console.error("Erro Crítico na geração Gemini:", e);
-    // Retorna o erro técnico real para facilitar o diagnóstico
-    throw new Error(`Erro técnico: ${e.message || "Falha na conexão com a IA"}`);
+    console.error("Erro Crítico Gemini SDK:", e);
+    // Retorna o erro técnico real para diagnóstico imediato no front-end
+    throw new Error(`Erro técnico: ${e.message || "Falha na conexão com o servidor de IA"}`);
   }
 };
