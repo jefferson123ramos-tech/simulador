@@ -86,7 +86,8 @@ export default function App() {
       if (e.message === "API_KEY_MISSING") {
         setError("Erro de Configuração: A variável VITE_GEMINI_API_KEY não foi encontrada na Vercel.");
       } else {
-        setError("A IA falhou em gerar o simulado. Tente um tema mais curto."); 
+        // Exibe o erro real conforme solicitado
+        setError("Erro na Geração: " + e.message);
       }
     } finally { setLoading(false); }
   };

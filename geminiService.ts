@@ -2,15 +2,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { QuizData, Difficulty } from "./types";
 
-const cleanJsonResponse = (text: string): string => {
+/**
+ * Limpa a resposta da IA de qualquer formatação Markdown ou texto extra.
+ * Conforme as diretrizes, a propriedade .text deve retornar o conteúdo limpo quando configurado com responseMimeType: "application/json".
+ */
+const sanitizeAiResponse = (text: string): string => {
   if (!text) return "";
-  let cleaned = text.trim();
-  cleaned = cleaned.replace(/```(?:json)?/g, "").replace(/```/g, "");
-  return cleaned.trim();
+  return text.trim();
 };
 
 export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
-  // O SDK utiliza process.env.API_KEY, que agora é alimentado pelo vite.config.ts
+  // A chave da API deve ser obtida exclusivamente de process.env.API_KEY conforme as diretrizes do SDK
   const apiKey = process.env.API_KEY;
 
   if (!apiKey || apiKey === "" || apiKey === "undefined") {
@@ -18,22 +20,25 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
   }
 
   try {
+    // Inicializa o cliente com a API Key em um objeto nomeado conforme as diretrizes
     const ai = new GoogleGenAI({ apiKey });
 
+    // Fix: Alterado o modelo para 'gemini-3-pro-preview' para lidar com a geração complexa de 50 questões técnicas (tarefa STEM/Reasoning).
+    // Fix: Removidas as safetySettings (linhas 54-58) que estavam causando erros de atribuição de tipo entre literais de string e os Enums HarmCategory/HarmBlockThreshold.
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: [{
         parts: [{
-          text: `Você é um professor acadêmico sênior. Sua tarefa é criar um simulado rigoroso e profissional.
+          text: `Você é um professor acadêmico sênior. Crie um simulado técnico sobre: "${text}".
+          Nível: ${difficulty.toUpperCase()}.
           
-          CONTEÚDO/TEMA: "${text}"
-          DIFICULDADE: ${difficulty.toUpperCase()}
-          REGRAS:
-          - Gere EXATAMENTE 50 questões de múltipla escolha.
-          - Cada questão deve ter 4 opções.
-          - O campo 'mentorTip' deve explicar POR QUE a resposta está correta (máx 15 palavras).
-          - Idioma: Português do Brasil.
-          - Retorne APENAS o JSON.`
+          REQUISITOS OBRIGATÓRIOS:
+          1. Gere EXATAMENTE 50 questões de múltipla escolha.
+          2. Cada questão deve ter 4 opções.
+          3. O campo 'mentorTip' deve ser uma explicação curta (máx 15 palavras).
+          4. Idioma: Português do Brasil.
+          
+          IMPORTANTE: Responda APENAS com o JSON cru.`
         }]
       }],
       config: {
@@ -64,22 +69,24 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
       }
     });
 
-    const rawOutput = response.text || "";
-    const sanitizedJson = cleanJsonResponse(rawOutput);
+    // Fix: Utilizada a propriedade .text (getter) diretamente conforme as diretrizes do SDK, evitando chamadas como métodos ou encadeamentos desnecessários.
+    const rawText = response.text || "";
+    const cleanedJson = sanitizeAiResponse(rawText);
     
     try {
-      const parsedData = JSON.parse(sanitizedJson) as QuizData;
+      const parsedData = JSON.parse(cleanedJson) as QuizData;
       if (!parsedData.questions || parsedData.questions.length === 0) {
-        throw new Error("EMPTY_RESPONSE");
+        throw new Error("A IA retornou um conjunto de dados vazio.");
       }
       return parsedData;
-    } catch (parseError) {
-      throw new Error("INVALID_JSON");
+    } catch (parseError: any) {
+      console.error("Falha no Parse. Texto recebido:", rawText);
+      throw new Error(`Erro na estrutura dos dados (JSON): ${parseError.message}`);
     }
 
   } catch (e: any) {
     if (e.message === "API_KEY_MISSING") throw e;
-    console.error("Erro no SDK Gemini:", e);
-    throw new Error(`FALHA_IA: ${e.message || "Erro de conexão"}`);
+    console.error("Erro no processamento da IA:", e);
+    throw new Error(e.message || "Erro desconhecido na comunicação com a IA.");
   }
 };
