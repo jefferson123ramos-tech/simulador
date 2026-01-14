@@ -117,7 +117,7 @@ export default function App() {
       if (data.status === 'pendente') { setError("Sua conta ainda não foi aprovada."); return; }
       setUser(data);
       setState('generator');
-    } catch (e) { setError("Erro de servidor."); } finally { setLoading(false); }
+    } catch (e: any) { setError(e.message || "Erro de servidor."); } finally { setLoading(false); }
   };
 
   const handleGenerate = async (text: string, difficulty: Difficulty) => {
@@ -133,7 +133,9 @@ export default function App() {
       setUserAnswers([]);
       setCurrentQuestionIndex(0);
       setState('quiz');
-    } catch (e) { setError("Erro ao gerar. Tente novamente."); } finally { setLoading(false); }
+    } catch (e: any) { 
+      setError(e.message || "Erro ao gerar simulado."); 
+    } finally { setLoading(false); }
   };
 
   const handleAnswerSelect = (index: number) => {
@@ -273,7 +275,7 @@ const LoadingView: React.FC<{ message: string }> = ({ message }) => (
     </div>
     <div className="space-y-2">
       <h3 className="text-2xl font-black text-white animate-pulse">{message}</h3>
-      <p className="text-slate-500">Aguarde, estamos lapidando 50 questões de alto nível.</p>
+      <p className="text-slate-500">Aguarde, estamos lapidando questões de alto nível.</p>
     </div>
   </div>
 );
@@ -317,7 +319,7 @@ const GeneratorCard: React.FC<{ onGenerate: (t: string, d: Difficulty) => void; 
         
         {error && <div className="mt-4 text-rose-400 text-xs font-bold bg-rose-400/10 p-4 rounded-xl border border-rose-400/20">{error}</div>}
         <button onClick={() => onGenerate(text, difficulty)} className="mt-8 w-full py-6 bg-white text-slate-950 font-black rounded-[2rem] hover:bg-indigo-50 shadow-2xl transition-all uppercase tracking-[0.2em] text-sm active:scale-95 border-b-4 border-slate-300">
-          Gerar Simulado Realista
+          Gerar Simulado de 15 Questões
         </button>
       </div>
     </div>
