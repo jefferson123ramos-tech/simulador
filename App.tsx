@@ -4,6 +4,46 @@ import { AppState, User, QuizData, Question, Difficulty, HistoryItem } from './t
 import { supabase } from './supabaseClient';
 import { generateQuiz } from './geminiService';
 
+// --- Custom Components ---
+
+const Logo: React.FC<{ size?: 'sm' | 'lg', className?: string }> = ({ size = 'sm', className = '' }) => {
+  const isLarge = size === 'lg';
+  return (
+    <div className={`flex items-center gap-3 ${className}`}>
+      <div className={`relative flex-shrink-0 ${isLarge ? 'w-16 h-16' : 'w-9 h-9'} group`}>
+        {/* Glow de fundo */}
+        <div className="absolute inset-0 bg-indigo-500/30 blur-xl rounded-full group-hover:bg-indigo-400/50 transition-all duration-500"></div>
+        
+        {/* Corpo do Logo */}
+        <div className={`relative h-full w-full bg-gradient-to-br from-indigo-500 to-violet-700 rounded-xl flex items-center justify-center shadow-lg border border-white/20 overflow-hidden`}>
+          {/* Detalhe interno reflexo */}
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-tr from-white/10 to-transparent pointer-events-none"></div>
+          
+          {/* Ícone customizado (Chapéu Acadêmico + Raio de Inteligência) */}
+          <svg 
+            viewBox="0 0 24 24" 
+            className={`${isLarge ? 'w-10 h-10' : 'w-6 h-6'} text-white fill-current drop-shadow-md`}
+          >
+            <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" />
+            <circle cx="12" cy="11" r="2" className="animate-pulse text-cyan-300" />
+          </svg>
+        </div>
+        
+        {/* Anel Externo Brilhante */}
+        <div className="absolute -inset-1 border border-indigo-500/20 rounded-2xl scale-110 group-hover:scale-100 transition-transform duration-500"></div>
+      </div>
+      
+      <div className="flex flex-col">
+        <h1 className={`${isLarge ? 'text-4xl' : 'text-xl'} font-black tracking-tighter uppercase leading-none italic flex items-center`}>
+          <span className="text-white">Simula</span>
+          <span className="text-indigo-500 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]">facil</span>
+        </h1>
+        {isLarge && <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.4em] ml-1 mt-1">Excelência Acadêmica</span>}
+      </div>
+    </div>
+  );
+};
+
 // --- Helpers ---
 const getGradeStatus = (score: number, total: number) => {
   const percent = (score / total) * 100;
@@ -15,17 +55,16 @@ const getGradeStatus = (score: number, total: number) => {
 const Navbar: React.FC<{ email?: string; onLogout?: () => void; onGoHome?: () => void }> = ({ email, onLogout, onGoHome }) => (
   <nav className="bg-slate-950/80 backdrop-blur-md border-b border-slate-800 text-white p-4 sticky top-0 z-50">
     <div className="max-w-6xl mx-auto flex justify-between items-center">
-      <div className="flex items-center gap-2 cursor-pointer group" onClick={onGoHome}>
-        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-black text-sm shadow-[0_0_15px_rgba(79,70,229,0.4)] group-hover:scale-110 transition-transform">S</div>
-        <h1 className="text-xl font-black tracking-tighter uppercase italic">Simula<span className="text-indigo-500">facil</span></h1>
+      <div className="cursor-pointer group" onClick={onGoHome}>
+        <Logo size="sm" />
       </div>
       {email && (
         <div className="flex items-center gap-4">
           <div className="hidden md:block text-right">
-            <p className="text-[10px] uppercase font-bold text-slate-500 leading-none">Conta Ativa</p>
+            <p className="text-[10px] uppercase font-bold text-slate-500 leading-none">Status: Online</p>
             <p className="text-xs font-medium text-slate-300">{email}</p>
           </div>
-          <button onClick={onLogout} className="p-2 hover:bg-rose-500/10 rounded-full transition text-slate-400 hover:text-rose-400">
+          <button onClick={onLogout} className="p-2.5 bg-slate-900 border border-slate-800 hover:bg-rose-500/10 rounded-xl transition-all text-slate-400 hover:text-rose-400">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
         </div>
@@ -120,7 +159,7 @@ export default function App() {
       total: quiz.questions.length,
       difficulty: currentDifficulty
     };
-    const newHistory = [newItem, ...history].slice(0, 100); // Guardamos até 100 registros
+    const newHistory = [newItem, ...history].slice(0, 100);
     setHistory(newHistory);
     localStorage.setItem('simulafacil_v1_history', JSON.stringify(newHistory));
   };
@@ -203,26 +242,23 @@ export default function App() {
 const LoginCard: React.FC<{ onLogin: (e: string) => void; loading: boolean; error: string | null }> = ({ onLogin, loading, error }) => {
   const [email, setEmail] = useState('');
   return (
-    <div className="max-w-md mx-auto bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 md:p-10 rounded-[2.5rem] shadow-2xl animate-in zoom-in-95 duration-500">
-      <div className="text-center mb-8">
-        <div className="inline-block p-4 bg-indigo-600/20 rounded-3xl mb-4 text-indigo-400">
-          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-3.613A10.959 10.959 0 012.25 11c0-2.83 1.065-5.413 2.82-7.374m1.246-1.246A10.97 10.97 0 0112 2.25c2.785 0 5.3 1.033 7.233 2.726m1.764 1.764A10.97 10.97 0 0121.75 11c0 2.83-1.065 5.413-2.82 7.374m-1.246 1.246A10.97 10.97 0 0112 19.75c-2.785 0-5.3-1.033-7.233-2.726" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </div>
-        <h2 className="text-3xl font-black text-white">Simulafacil</h2>
-        <p className="text-slate-400 mt-2 text-sm">Entre para salvar seu progresso local</p>
+    <div className="max-w-md mx-auto bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 md:p-12 rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-500">
+      <div className="text-center mb-10">
+        <Logo size="lg" className="justify-center mb-4" />
+        <p className="text-slate-400 mt-2 text-sm max-w-[250px] mx-auto">Sua plataforma avançada de simulados acadêmicos</p>
       </div>
       <form onSubmit={e => { e.preventDefault(); onLogin(email); }} className="space-y-6">
         <div className="space-y-1">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">E-mail Cadastrado</label>
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">E-mail de Acesso</label>
           <input 
             type="email" value={email} onChange={e => setEmail(e.target.value)} required
-            className="w-full bg-slate-950/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-indigo-500 transition text-white"
-            placeholder="exemplo@gmail.com"
+            className="w-full bg-slate-950/50 border border-slate-700 p-4 rounded-2xl outline-none focus:border-indigo-500 transition text-white placeholder:text-slate-700"
+            placeholder="digite seu e-mail..."
           />
         </div>
         {error && <div className="text-rose-400 text-xs font-bold bg-rose-400/10 p-4 rounded-xl border border-rose-400/20">{error}</div>}
-        <button disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl shadow-xl transition-all active:scale-95">
-          {loading ? 'Validando...' : 'Iniciar Jornada'}
+        <button disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all active:scale-95">
+          {loading ? 'Sincronizando...' : 'Acessar Plataforma'}
         </button>
       </form>
     </div>
@@ -237,7 +273,7 @@ const LoadingView: React.FC<{ message: string }> = ({ message }) => (
     </div>
     <div className="space-y-2">
       <h3 className="text-2xl font-black text-white animate-pulse">{message}</h3>
-      <p className="text-slate-500">Isso pode levar até 10 segundos para exatidão máxima.</p>
+      <p className="text-slate-500">Aguarde, estamos lapidando 50 questões de alto nível.</p>
     </div>
   </div>
 );
@@ -248,25 +284,25 @@ const GeneratorCard: React.FC<{ onGenerate: (t: string, d: Difficulty) => void; 
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 md:p-10 rounded-[2.5rem] shadow-2xl">
+      <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 md:p-10 rounded-[3rem] shadow-2xl">
         <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-8">
           <div>
-            <h2 className="text-4xl font-black text-white tracking-tighter italic">Novo Simulado</h2>
+            <h2 className="text-4xl font-black text-white tracking-tighter italic">Novo Desafio</h2>
             <p className="text-slate-400 mt-2 text-lg">Qual o foco do seu estudo hoje?</p>
           </div>
           {history.length > 0 && (
-            <button onClick={onViewHistory} className="group flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-2xl transition-all text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-indigo-600/20">
-              <svg className="w-4 h-4 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <button onClick={onViewHistory} className="group flex items-center gap-3 px-7 py-3.5 bg-indigo-600 hover:bg-indigo-500 rounded-2xl transition-all text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-indigo-600/20 active:scale-95">
+              <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Ver Meu Rank
             </button>
           )}
         </div>
 
         <div className="mb-6">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 block">Nível do Desafio</label>
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 block">Complexidade das Questões</label>
           <div className="grid grid-cols-3 gap-3">
             {(['fácil', 'médio', 'difícil'] as Difficulty[]).map((level) => (
-              <button key={level} onClick={() => setDifficulty(level)} className={`py-4 rounded-xl border font-black capitalize transition-all text-xs tracking-widest ${difficulty === level ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-slate-950/40 border-slate-700 text-slate-500'}`}>
+              <button key={level} onClick={() => setDifficulty(level)} className={`py-4 rounded-2xl border font-black capitalize transition-all text-xs tracking-widest ${difficulty === level ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-slate-950/40 border-slate-700 text-slate-500 hover:border-slate-500'}`}>
                 {level}
               </button>
             ))}
@@ -275,13 +311,13 @@ const GeneratorCard: React.FC<{ onGenerate: (t: string, d: Difficulty) => void; 
 
         <textarea 
           value={text} onChange={e => setText(e.target.value)}
-          placeholder="Ex: 'Ética Profissional' ou cole seu resumo aqui..."
-          className="w-full h-52 bg-slate-950/50 border border-slate-700 p-6 rounded-3xl outline-none focus:border-indigo-500 transition text-slate-300 font-medium leading-relaxed resize-none shadow-inner"
+          placeholder="Ex: 'História do Brasil Império' ou cole seu material de apoio aqui..."
+          className="w-full h-52 bg-slate-950/50 border border-slate-700 p-6 rounded-[2rem] outline-none focus:border-indigo-500 transition text-slate-300 font-medium leading-relaxed resize-none shadow-inner"
         />
         
         {error && <div className="mt-4 text-rose-400 text-xs font-bold bg-rose-400/10 p-4 rounded-xl border border-rose-400/20">{error}</div>}
-        <button onClick={() => onGenerate(text, difficulty)} className="mt-8 w-full px-16 py-6 bg-white text-slate-950 font-black rounded-3xl hover:bg-indigo-50 shadow-2xl transition-all uppercase tracking-widest text-sm active:scale-95">
-          Criar Simulado de 50 Questões
+        <button onClick={() => onGenerate(text, difficulty)} className="mt-8 w-full py-6 bg-white text-slate-950 font-black rounded-[2rem] hover:bg-indigo-50 shadow-2xl transition-all uppercase tracking-[0.2em] text-sm active:scale-95 border-b-4 border-slate-300">
+          Gerar Simulado Realista
         </button>
       </div>
     </div>
@@ -291,18 +327,21 @@ const GeneratorCard: React.FC<{ onGenerate: (t: string, d: Difficulty) => void; 
 const QuizView: React.FC<{ question: Question; total: number; current: number; onSelect: (idx: number) => void }> = ({ question, total, current, onSelect }) => (
   <div className="max-w-3xl mx-auto space-y-10 animate-in slide-in-from-right-10 duration-500">
     <div className="flex items-center justify-between">
-      <div>
-        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Sessão em Curso</p>
-        <h3 className="text-2xl font-black text-white italic">Questão {current.toString().padStart(2, '0')}</h3>
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-black">{current}</div>
+        <div>
+          <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Em Andamento</p>
+          <h3 className="text-xl font-black text-white italic">Questão {current} de {total}</h3>
+        </div>
       </div>
       <div className="text-right">
-        <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Progresso</p>
+        <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Status do Exame</p>
         <div className="w-32 h-1.5 bg-slate-800 rounded-full overflow-hidden">
           <div className="h-full bg-indigo-600 transition-all duration-500" style={{ width: `${(current/total)*100}%` }} />
         </div>
       </div>
     </div>
-    <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-10 rounded-[2.5rem] shadow-2xl">
+    <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-10 rounded-[3rem] shadow-2xl relative">
       <p className="text-xl font-bold text-white leading-snug mb-10">{question.question}</p>
       <div className="grid grid-cols-1 gap-4">
         {question.options.map((opt, i) => (
@@ -333,7 +372,7 @@ const ResultView: React.FC<{ quiz: QuizData; userAnswers: number[]; onRestart: (
 
   return (
     <div className="space-y-10 py-10 animate-in fade-in duration-1000">
-      <div className={`p-10 rounded-[3.5rem] border ${status.border} ${status.bg} backdrop-blur-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-12`}>
+      <div className={`p-10 rounded-[4rem] border ${status.border} ${status.bg} backdrop-blur-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-12`}>
         <div className="space-y-5 text-center md:text-left">
           <span className={`text-[10px] font-black uppercase tracking-[0.5em] ${status.color}`}>Relatório Acadêmico</span>
           <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter italic">
@@ -341,48 +380,53 @@ const ResultView: React.FC<{ quiz: QuizData; userAnswers: number[]; onRestart: (
           </h2>
           <p className="text-slate-300 max-w-sm font-medium text-lg leading-relaxed">{status.msg}</p>
           <div className="flex flex-wrap gap-3 justify-center md:justify-start pt-2">
-            <button onClick={onDownload} className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 transition-all text-[10px] font-black uppercase tracking-widest text-white">
-              Download Relatório (.txt)
+            <button onClick={onDownload} className="flex items-center gap-2 px-6 py-3.5 bg-white/10 hover:bg-white/20 rounded-2xl border border-white/10 transition-all text-[10px] font-black uppercase tracking-widest text-white shadow-lg">
+              Download Relatório
             </button>
-            <button onClick={onRestart} className="px-6 py-3 bg-white text-slate-950 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all">
+            <button onClick={onRestart} className="px-8 py-3.5 bg-white text-slate-950 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all shadow-xl">
               Novo Simulado
             </button>
           </div>
         </div>
         <div className="flex flex-col items-center gap-2">
-          <div className="w-48 h-48 rounded-full border-[14px] border-slate-800 flex items-center justify-center relative shadow-inner">
-            <svg className="absolute inset-0 w-full h-full -rotate-90">
-              <circle cx="96" cy="96" r={radius} fill="transparent" stroke="currentColor" strokeWidth="14" className={`${status.color} transition-all duration-[2000ms] ease-out`} strokeDasharray={circ} strokeDashoffset={isNaN(off) ? circ : off} strokeLinecap="round" />
+          <div className="w-52 h-52 rounded-full border-[14px] border-slate-800 flex items-center justify-center relative shadow-2xl bg-slate-950/20">
+            <svg className="absolute inset-0 w-full h-full -rotate-90 scale-105">
+              <circle cx="104" cy="104" r={radius} fill="transparent" stroke="currentColor" strokeWidth="14" className={`${status.color} transition-all duration-[2000ms] ease-out drop-shadow-[0_0_8px_currentColor]`} strokeDasharray={circ} strokeDashoffset={isNaN(off) ? circ : off} strokeLinecap="round" />
             </svg>
             <div className="text-center animate-in zoom-in duration-1000 delay-500">
-              <p className="text-6xl font-black text-white">{score}</p>
-              <p className="text-[10px] font-black text-slate-500 uppercase mt-1">de {quiz.questions.length}</p>
+              <p className="text-7xl font-black text-white leading-none">{score}</p>
+              <p className="text-[10px] font-black text-slate-500 uppercase mt-2">de {quiz.questions.length}</p>
             </div>
           </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-6 bg-slate-950/50 px-4 py-2 rounded-full border border-slate-800">
-            {Math.round((score/quiz.questions.length)*100)}% Aproveitamento
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-8 bg-slate-950/80 px-6 py-2.5 rounded-full border border-slate-800 shadow-xl">
+            {Math.round((score/quiz.questions.length)*100)}% de Aproveitamento
           </p>
         </div>
       </div>
 
       <div className="space-y-8">
-        <h4 className="text-xl font-black text-white uppercase tracking-tighter italic flex items-center gap-3 ml-2">
-          <span className="w-2 h-8 bg-indigo-600 rounded-full" />
-          Revisão de Erros ({errors.length})
+        <h4 className="text-2xl font-black text-white uppercase tracking-tighter italic flex items-center gap-3 ml-2">
+          <span className="w-2.5 h-9 bg-indigo-600 rounded-full shadow-[0_0_15px_rgba(79,70,229,0.5)]" />
+          Revisão Detalhada ({errors.length})
         </h4>
         <div className="grid grid-cols-1 gap-6">
           {errors.map((q, idx) => {
             const uIdx = quiz.questions.indexOf(q);
             return (
-              <div key={idx} className="bg-slate-900/40 border border-slate-800 p-8 rounded-[2.5rem] hover:border-slate-700 transition-all">
-                <p className="text-lg font-bold text-white mb-6 leading-relaxed">#{(uIdx + 1).toString().padStart(2, '0')} — {q.question}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10"><p className="text-[10px] font-black text-rose-400 uppercase mb-1">Sua Resposta</p><p className="text-sm font-medium text-slate-400">{q.options[userAnswers[uIdx]] || 'Não respondida'}</p></div>
-                  <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10"><p className="text-[10px] font-black text-emerald-400 uppercase mb-1">Gabarito</p><p className="text-sm font-medium text-emerald-100">{q.options[q.correctAnswerIndex]}</p></div>
+              <div key={idx} className="bg-slate-900/40 border border-slate-800 p-8 md:p-10 rounded-[3rem] hover:border-slate-700 transition-all group">
+                <p className="text-xl font-bold text-white mb-8 leading-relaxed">#{(uIdx + 1).toString().padStart(2, '0')} — {q.question}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <div className="p-5 rounded-3xl bg-rose-500/5 border border-rose-500/10"><p className="text-[10px] font-black text-rose-400 uppercase mb-2">Sua Marcação</p><p className="text-sm font-medium text-slate-400">{q.options[userAnswers[uIdx]] || 'Vazio'}</p></div>
+                  <div className="p-5 rounded-3xl bg-emerald-500/5 border border-emerald-500/10"><p className="text-[10px] font-black text-emerald-400 uppercase mb-2">Opção Correta</p><p className="text-sm font-medium text-emerald-100">{q.options[q.correctAnswerIndex]}</p></div>
                 </div>
-                <div className="bg-indigo-600/10 border border-indigo-600/20 p-6 rounded-[2rem] flex gap-4">
-                  <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center flex-shrink-0 text-white shadow-xl"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
-                  <div><p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Análise do Mentor</p><p className="text-sm font-medium text-indigo-100 italic leading-relaxed">"{q.mentorTip}"</p></div>
+                <div className="bg-indigo-600/10 border border-indigo-600/20 p-8 rounded-[2.5rem] flex gap-5 group-hover:bg-indigo-600/15 transition-all">
+                  <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center flex-shrink-0 text-white shadow-xl shadow-indigo-600/30">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1.5">Nota do Mentor Especialista</p>
+                    <p className="text-sm font-medium text-indigo-50/80 italic leading-relaxed">"{q.mentorTip}"</p>
+                  </div>
                 </div>
               </div>
             );
@@ -402,53 +446,53 @@ const HistoryView: React.FC<{ history: HistoryItem[]; onBack: () => void; onClea
   });
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 py-10 animate-in slide-in-from-bottom-10 duration-500">
+    <div className="max-w-4xl mx-auto space-y-10 py-10 animate-in slide-in-from-bottom-10 duration-500">
       <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-6 px-4">
         <div>
-          <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">Meu Rank <span className="text-indigo-500">Pessoal</span></h2>
-          <p className="text-slate-500 text-sm mt-1">Seus melhores resultados salvos localmente.</p>
+          <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">Meu Rank <span className="text-indigo-500">Global</span></h2>
+          <p className="text-slate-500 text-sm mt-1">Dados de performance salvos no seu dispositivo.</p>
         </div>
-        <div className="flex gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800">
-          <button onClick={() => setSortMode('best')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${sortMode === 'best' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>Melhores Notas</button>
-          <button onClick={() => setSortMode('recent')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${sortMode === 'recent' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>Mais Recentes</button>
+        <div className="flex gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shadow-xl">
+          <button onClick={() => setSortMode('best')} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${sortMode === 'best' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-500 hover:text-white'}`}>Melhores Notas</button>
+          <button onClick={() => setSortMode('recent')} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${sortMode === 'recent' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-500 hover:text-white'}`}>Cronológico</button>
         </div>
       </div>
 
-      <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[3rem] overflow-hidden shadow-2xl">
+      <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[3.5rem] overflow-hidden shadow-2xl relative">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-950/60 text-slate-500 text-[10px] font-black uppercase tracking-widest">
-                <th className="px-10 py-7">Posição / Tema</th>
-                <th className="px-10 py-7 text-center">Nível</th>
-                <th className="px-10 py-7 text-right">Resultado</th>
+              <tr className="bg-slate-950/80 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-800">
+                <th className="px-10 py-8">Classificação / Tema</th>
+                <th className="px-10 py-8 text-center">Nível</th>
+                <th className="px-10 py-8 text-right">Performance</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-slate-800/50">
               {sortedHistory.map((item, idx) => {
                 const perc = Math.round((item.correct / item.total) * 100);
                 return (
-                  <tr key={item.id} className="hover:bg-slate-800/30 transition-colors group">
-                    <td className="px-10 py-7">
-                      <div className="flex items-center gap-6">
-                        <span className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs ${idx === 0 ? 'bg-amber-400 text-amber-950' : idx === 1 ? 'bg-slate-300 text-slate-900' : idx === 2 ? 'bg-orange-400 text-orange-950' : 'bg-slate-800 text-slate-500'}`}>
-                          {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : (idx + 1).toString().padStart(2, '0')}
+                  <tr key={item.id} className="hover:bg-indigo-600/5 transition-all group">
+                    <td className="px-10 py-8">
+                      <div className="flex items-center gap-7">
+                        <span className={`w-11 h-11 rounded-[1rem] flex items-center justify-center font-black text-sm shadow-xl transition-transform group-hover:scale-110 ${idx === 0 ? 'bg-amber-400 text-amber-950 scale-110 rotate-3' : idx === 1 ? 'bg-slate-300 text-slate-900' : idx === 2 ? 'bg-orange-400 text-orange-950' : 'bg-slate-800/80 text-slate-500'}`}>
+                          {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : (idx + 1)}
                         </span>
                         <div>
-                          <p className="font-bold text-slate-200 group-hover:text-white transition-colors">{item.subject}</p>
-                          <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5">{item.date.split(',')[0]}</p>
+                          <p className="font-bold text-slate-200 text-lg group-hover:text-white transition-colors">{item.subject}</p>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-wider">{item.date.split(',')[0]}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-10 py-7 text-center">
-                      <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${item.difficulty === 'difícil' ? 'bg-rose-500/10 text-rose-400' : item.difficulty === 'médio' ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                    <td className="px-10 py-8 text-center">
+                      <span className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${item.difficulty === 'difícil' ? 'bg-rose-500/5 border-rose-500/20 text-rose-400' : item.difficulty === 'médio' ? 'bg-amber-500/5 border-amber-500/20 text-amber-400' : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'}`}>
                         {item.difficulty}
                       </span>
                     </td>
-                    <td className="px-10 py-7 text-right">
-                      <div className="inline-block px-4 py-2 bg-slate-950/40 rounded-2xl border border-slate-800">
-                        <p className={`text-sm font-black ${perc >= 70 ? 'text-emerald-400' : perc >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>
-                          {item.correct}/{item.total} ({perc}%)
+                    <td className="px-10 py-8 text-right">
+                      <div className="inline-block px-5 py-2.5 bg-slate-950/60 rounded-2xl border border-slate-800 shadow-inner group-hover:border-indigo-500/30 transition-all">
+                        <p className={`text-base font-black ${perc >= 70 ? 'text-emerald-400' : perc >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>
+                          {item.correct}/{item.total} <span className="text-[10px] opacity-60 ml-1">({perc}%)</span>
                         </p>
                       </div>
                     </td>
@@ -458,13 +502,13 @@ const HistoryView: React.FC<{ history: HistoryItem[]; onBack: () => void; onClea
             </tbody>
           </table>
         </div>
-        {history.length === 0 && <div className="p-32 text-center text-slate-600 font-medium italic">Seu rank está vazio. Conclua um simulado para começar!</div>}
+        {history.length === 0 && <div className="p-32 text-center text-slate-600 font-medium italic">Seu rank está aguardando seu primeiro simulado!</div>}
       </div>
 
       <div className="flex justify-between items-center px-4">
-        <button onClick={onBack} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-all bg-white/5 px-6 py-3 rounded-2xl">Voltar ao Gerador</button>
+        <button onClick={onBack} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all bg-white/5 px-8 py-4 rounded-2xl border border-white/5 hover:bg-white/10">Voltar ao Gerador</button>
         {history.length > 0 && (
-          <button onClick={onClear} className="text-[10px] font-black uppercase tracking-widest text-rose-500/50 hover:text-rose-400 transition-all">Limpar Tudo</button>
+          <button onClick={onClear} className="text-[10px] font-black uppercase tracking-widest text-rose-500/40 hover:text-rose-400 transition-all">Limpar Histórico Local</button>
         )}
       </div>
     </div>
