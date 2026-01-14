@@ -80,8 +80,8 @@ export default function App() {
       setCurrentQuestionIndex(0);
       setState('quiz');
     } catch (e: any) { 
-      // Alerta Técnico Obrigatório Conforme Solicitação
-      alert("Erro na Geração: " + e.message);
+      // Alerta Técnico para diagnóstico rápido em produção
+      alert("Falha na Geração: " + e.message);
       setError(e.message);
     } finally { setLoading(false); }
   };

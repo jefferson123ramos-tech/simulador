@@ -7,10 +7,8 @@ import { QuizData, Difficulty } from "./types";
  */
 const sanitizeAiResponse = (text: string): string => {
   if (!text) return "";
-  // Remove blocos de código markdown e espaços extras
   let cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
   
-  // Garante que pegamos apenas o que está entre as chaves do objeto principal
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
   
@@ -22,22 +20,13 @@ const sanitizeAiResponse = (text: string): string => {
 };
 
 export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
-  // Fix: Use process.env.API_KEY exclusively as per SDK guidelines.
-  const apiKey = process.env.API_KEY;
-
-  if (!apiKey) {
-    throw new Error("Chave de API não configurada.");
-  }
-
   try {
-    // Fix: Create new GoogleGenAI instance inside the function to ensure up-to-date config is used.
-    const ai = new GoogleGenAI({ apiKey });
+    // Initializing the AI client using process.env.API_KEY directly as per guidelines.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    // Fix: Use 'gemini-3-flash-preview' for optimal performance in text tasks.
-    // Fix: Move safetySettings to the top level of the request parameters (not inside config).
-    // Fix: Use HarmCategory and HarmBlockThreshold enums to resolve TypeScript type assignment errors.
+    // Modelo gemini-3-pro-preview: Recomendado para tarefas complexas de texto como geração de simulados técnicos.
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: [{
         parts: [{
           text: `Você é um professor acadêmico sênior. Crie um simulado técnico sobre: "${text}".
@@ -49,16 +38,17 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
           3. O campo 'mentorTip' deve ser uma explicação curta (máx 15 palavras).
           4. Idioma: Português do Brasil.
           
-          IMPORTANTE: Responda APENAS com o JSON cru. Não use markdown, não use crases, não coloque introdução nem conclusão.`
+          IMPORTANTE: Responda APENAS com o JSON cru.`
         }]
       }],
-      safetySettings: [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
-      ],
       config: {
+        // Fix: safetySettings is a property of the config object, not GenerateContentParameters.
+        safetySettings: [
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
+        ],
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -86,7 +76,7 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
       }
     });
 
-    // Fix: Access response.text property directly as per modern SDK guidelines.
+    // Access the generated text directly using the property.
     const rawText = response.text || "";
     const cleanedJson = sanitizeAiResponse(rawText);
     
@@ -97,12 +87,12 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
       }
       return parsedData;
     } catch (parseError: any) {
-      console.error("Falha ao processar JSON. Raw:", rawText);
-      throw new Error(`Falha na estrutura do simulado (JSON Parse): ${parseError.message}`);
+      console.error("Erro no Parse JSON. Conteúdo bruto:", rawText);
+      throw new Error(`Falha na formatação dos dados: ${parseError.message}`);
     }
 
   } catch (e: any) {
-    console.error("Erro na comunicação com Gemini API:", e);
-    throw new Error(e.message || "Erro desconhecido na comunicação com a IA.");
+    console.error("Erro na Gemini API:", e);
+    throw e;
   }
 };
