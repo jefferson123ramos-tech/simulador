@@ -1,97 +1,46 @@
-import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import { QuizData, Difficulty } from "./types";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-/**
- * Limpa a resposta da IA de qualquer formatação Markdown ou texto extra.
- */
-const sanitizeAiResponse = (text: string): string => {
-  if (!text) return "";
-  let cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
-  
-  const firstBrace = cleaned.indexOf('{');
-  const lastBrace = cleaned.lastIndexOf('}');
-  
-  if (firstBrace !== -1 && lastBrace !== -1) {
-    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+// Tenta pegar a chave com ou sem o prefixo VITE_
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
+
+export const generateQuestions = async (topic: string) => {
+  if (!API_KEY) {
+    throw new Error("API Key não encontrada. Verifique as configurações da Netlify.");
   }
-  
-  return cleaned;
-};
 
-export const generateQuiz = async (text: string, difficulty: Difficulty): Promise<QuizData> => {
   try {
-    // Initializing the AI client using process.env.API_KEY directly as per guidelines.
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    // Aqui está o modelo correto que não dá erro de cota
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Modelo model: gemini-1.5-flash: Versão mais rápida e ideal para contas com cotas padrão.
-    const response = await ai.models.generateContent({
-      model: model: gemini-1.5-flash,
-      contents: [{
-        parts: [{
-          text: `Você é um professor acadêmico sênior. Crie um simulado técnico sobre: "${text}".
-          Nível: ${difficulty.toUpperCase()}.
-          
-          REQUISITOS OBRIGATÓRIOS:
-          1. Gere EXATAMENTE 50 questões de múltipla escolha.
-          2. Cada questão deve ter 4 opções.
-          3. O campo 'mentorTip' deve ser uma explicação curta (máx 15 palavras).
-          4. Idioma: Português do Brasil.
-          
-          IMPORTANTE: Responda APENAS com o JSON cru.`
-        }]
-      }],
-      config: {
-        // Fix: safetySettings is a property of the config object, not GenerateContentParameters.
-        safetySettings: [
-          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
-        ],
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            questions: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.INTEGER },
-                  question: { type: Type.STRING },
-                  options: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
-                  },
-                  correctAnswerIndex: { type: Type.INTEGER },
-                  mentorTip: { type: Type.STRING }
-                },
-                required: ["id", "question", "options", "correctAnswerIndex", "mentorTip"]
-              }
-            }
-          },
-          required: ["questions"]
+    const prompt = `
+      Crie um simulado de concurso público nível difícil sobre: "${topic}".
+      Gere EXATAMENTE 10 questões.
+      
+      Retorne APENAS um JSON válido. Não use Markdown. Não use explicações antes ou depois.
+      O formato deve ser estritamente este array de objetos:
+      [
+        {
+          "id": 1,
+          "question": "O enunciado da questão aqui",
+          "options": ["Alternativa A", "Alternativa B", "Alternativa C", "Alternativa D", "Alternativa E"],
+          "correctAnswerIndex": 0,
+          "explanation": "Explicação detalhada."
         }
-      }
-    });
+      ]
+    `;
 
-    // Access the generated text directly using the property.
-    const rawText = response.text || "";
-    const cleanedJson = sanitizeAiResponse(rawText);
-    
-    try {
-      const parsedData = JSON.parse(cleanedJson) as QuizData;
-      if (!parsedData.questions || parsedData.questions.length === 0) {
-        throw new Error("A IA retornou um conjunto de dados vazio.");
-      }
-      return parsedData;
-    } catch (parseError: any) {
-      console.error("Erro no Parse JSON. Conteúdo bruto:", rawText);
-      throw new Error(`Falha na formatação dos dados: ${parseError.message}`);
-    }
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    let text = response.text();
 
-  } catch (e: any) {
-    console.error("Erro na Gemini API:", e);
-    throw e;
+    // Limpeza de segurança para garantir que é JSON puro
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    return JSON.parse(text);
+
+  } catch (error) {
+    console.error("Erro ao gerar questões:", error);
+    throw new Error("Falha ao gerar o simulado. Tente novamente.");
   }
 };
