@@ -23,9 +23,9 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
     // Initializing the AI client using process.env.API_KEY directly as per guidelines.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    // Modelo model: "gemini-1.5-flash": Versão mais rápida e ideal para contas com cotas padrão.
+    // Modelo model: gemini-1.5-flash: Versão mais rápida e ideal para contas com cotas padrão.
     const response = await ai.models.generateContent({
-      model: model: "gemini-1.5-flash",
+      model: model: gemini-1.5-flash,
       contents: [{
         parts: [{
           text: `Você é um professor acadêmico sênior. Crie um simulado técnico sobre: "${text}".
