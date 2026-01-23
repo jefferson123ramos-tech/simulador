@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { QuizData, Difficulty } from "./types";
 
@@ -24,9 +23,9 @@ export const generateQuiz = async (text: string, difficulty: Difficulty): Promis
     // Initializing the AI client using process.env.API_KEY directly as per guidelines.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    // Modelo gemini-3-pro-preview: Recomendado para tarefas complexas de texto como geração de simulados técnicos.
+    // Modelo gemini-3-flash-preview: Versão mais rápida e ideal para contas com cotas padrão.
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',
       contents: [{
         parts: [{
           text: `Você é um professor acadêmico sênior. Crie um simulado técnico sobre: "${text}".
